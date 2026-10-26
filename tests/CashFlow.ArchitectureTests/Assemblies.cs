@@ -34,7 +34,14 @@ public static class Assemblies
             typeof(CashFlow.Modules.Transactions.Application.Abstractions.Data.ITransactionsDbContext).Assembly,
             typeof(CashFlow.Modules.Transactions.Infrastructure.TransactionsModule).Assembly,
             typeof(CashFlow.Modules.Transactions.Presentation.TransactionsPresentation).Assembly,
-            typeof(CashFlow.Modules.Transactions.IntegrationEvents.TransactionsIntegrationEvents).Assembly)
+            typeof(CashFlow.Modules.Transactions.IntegrationEvents.TransactionsIntegrationEvents).Assembly),
+        new(
+            "Consolidation",
+            typeof(CashFlow.Modules.Consolidation.Domain.ConsolidationDomain).Assembly,
+            typeof(CashFlow.Modules.Consolidation.Application.Abstractions.Data.IConsolidationDbContext).Assembly,
+            typeof(CashFlow.Modules.Consolidation.Infrastructure.ConsolidationModule).Assembly,
+            typeof(CashFlow.Modules.Consolidation.Presentation.ConsolidationPresentation).Assembly,
+            typeof(CashFlow.Modules.Consolidation.IntegrationEvents.ConsolidationIntegrationEvents).Assembly)
     ];
 
     public static DirectoryInfo RepositoryRoot()

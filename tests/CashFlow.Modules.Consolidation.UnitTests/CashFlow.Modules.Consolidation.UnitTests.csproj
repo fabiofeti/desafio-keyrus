@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Domain\CashFlow.Modules.Consolidation.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Application\CashFlow.Modules.Consolidation.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Infrastructure\CashFlow.Modules.Consolidation.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

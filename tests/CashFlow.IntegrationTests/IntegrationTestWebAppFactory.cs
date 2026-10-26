@@ -1,3 +1,5 @@
+using CashFlow.Modules.Consolidation.Infrastructure;
+using CashFlow.Modules.Consolidation.Infrastructure.Database;
 using CashFlow.Modules.Transactions.Infrastructure;
 using CashFlow.Modules.Transactions.Infrastructure.Database;
 using Microsoft.AspNetCore.Hosting;
@@ -67,6 +69,8 @@ public sealed class IntegrationTestWebAppFactory : WebApplicationFactory<Program
         // the API under test then connects with the restricted roles only.
         await MigrateAsync<TransactionsDbContext>(
             options => TransactionsModule.ConfigureDbContext(options, AdminConnectionString));
+        await MigrateAsync<ConsolidationDbContext>(
+            options => ConsolidationModule.ConfigureDbContext(options, AdminConnectionString));
     }
 
     public new async Task DisposeAsync()

@@ -28,6 +28,11 @@
 
   <!-- Module projects under test are added here by the add-module skill. -->
   <ItemGroup Label="Modules under test">
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Domain\CashFlow.Modules.Consolidation.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Application\CashFlow.Modules.Consolidation.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Infrastructure\CashFlow.Modules.Consolidation.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Presentation\CashFlow.Modules.Consolidation.Presentation.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.IntegrationEvents\CashFlow.Modules.Consolidation.IntegrationEvents.csproj" />
     <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Domain\CashFlow.Modules.Transactions.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Application\CashFlow.Modules.Transactions.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Infrastructure\CashFlow.Modules.Transactions.Infrastructure.csproj" />

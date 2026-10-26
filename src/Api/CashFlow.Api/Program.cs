@@ -5,6 +5,7 @@ using CashFlow.Common.Presentation.Correlation;
 using CashFlow.Common.Presentation.Endpoints;
 using CashFlow.Common.Presentation.ExceptionHandling;
 using CashFlow.Hosting;
+using CashFlow.Modules.Consolidation.Infrastructure;
 using CashFlow.Modules.Transactions.Infrastructure;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,7 @@ builder.Services.AddHealthChecks();
 // assembly that knows the full list. The API registers no broker: a POST
 // writes the transaction and its outbox message and is done.
 builder.Services.AddTransactionsModule(builder.Configuration);
+builder.Services.AddConsolidationModule(builder.Configuration);
 
 WebApplication app = builder.Build();
 

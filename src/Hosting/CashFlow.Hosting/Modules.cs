@@ -1,4 +1,6 @@
 using System.Reflection;
+using CashFlow.Modules.Consolidation.Application.Abstractions.Data;
+using CashFlow.Modules.Consolidation.Presentation;
 using CashFlow.Modules.Transactions.Application.Abstractions.Data;
 using CashFlow.Modules.Transactions.Presentation;
 
@@ -17,12 +19,14 @@ public static class Modules
     /// <summary>Assemblies scanned for command/query handlers and validators.</summary>
     public static readonly Assembly[] ApplicationAssemblies =
     [
-        typeof(ITransactionsDbContext).Assembly
+        typeof(ITransactionsDbContext).Assembly,
+        typeof(IConsolidationDbContext).Assembly
     ];
 
     /// <summary>Assemblies scanned for <c>IEndpoint</c> (API) and integration event handlers (Worker).</summary>
     public static readonly Assembly[] PresentationAssemblies =
     [
-        typeof(TransactionsPresentation).Assembly
+        typeof(TransactionsPresentation).Assembly,
+        typeof(ConsolidationPresentation).Assembly
     ];
 }

@@ -1,6 +1,7 @@
 using CashFlow.Common.Application;
 using CashFlow.Common.Infrastructure;
 using CashFlow.Common.Infrastructure.Messaging;
+using CashFlow.Modules.Consolidation.Infrastructure;
 using CashFlow.Modules.Transactions.Infrastructure;
 
 namespace CashFlow.Worker;
@@ -23,6 +24,7 @@ public static class WorkerComposition
         // connection string and database role - hosting both modules never
         // grants this process cross-module write access.
         services.AddTransactionsWorker(configuration);
+        services.AddConsolidationWorker(configuration);
 
         return services;
     }

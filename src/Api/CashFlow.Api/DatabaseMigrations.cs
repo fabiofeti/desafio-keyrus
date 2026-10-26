@@ -1,3 +1,4 @@
+using CashFlow.Modules.Consolidation.Infrastructure.Database;
 using CashFlow.Modules.Transactions.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,7 @@ internal static class DatabaseMigrations
             .CreateLogger(typeof(DatabaseMigrations));
 
         await scope.ServiceProvider.GetRequiredService<TransactionsDbContext>().Database.MigrateAsync();
+        await scope.ServiceProvider.GetRequiredService<ConsolidationDbContext>().Database.MigrateAsync();
 
         logger.LogInformation("Database migrations applied");
     }

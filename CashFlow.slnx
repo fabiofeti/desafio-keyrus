@@ -12,6 +12,13 @@
     <Project Path="src/Worker/CashFlow.Worker/CashFlow.Worker.csproj" />
   </Folder>
   <Folder Name="/src/modules/" />
+  <Folder Name="/src/modules/consolidation/">
+    <Project Path="src/Modules/Consolidation/CashFlow.Modules.Consolidation.Domain/CashFlow.Modules.Consolidation.Domain.csproj" />
+    <Project Path="src/Modules/Consolidation/CashFlow.Modules.Consolidation.Application/CashFlow.Modules.Consolidation.Application.csproj" />
+    <Project Path="src/Modules/Consolidation/CashFlow.Modules.Consolidation.Infrastructure/CashFlow.Modules.Consolidation.Infrastructure.csproj" />
+    <Project Path="src/Modules/Consolidation/CashFlow.Modules.Consolidation.Presentation/CashFlow.Modules.Consolidation.Presentation.csproj" />
+    <Project Path="src/Modules/Consolidation/CashFlow.Modules.Consolidation.IntegrationEvents/CashFlow.Modules.Consolidation.IntegrationEvents.csproj" />
+  </Folder>
   <Folder Name="/src/modules/transactions/">
     <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.Domain/CashFlow.Modules.Transactions.Domain.csproj" />
     <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.Application/CashFlow.Modules.Transactions.Application.csproj" />
@@ -22,6 +29,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj" />
     <Project Path="tests/CashFlow.IntegrationTests/CashFlow.IntegrationTests.csproj" />
+    <Project Path="tests/CashFlow.Modules.Consolidation.UnitTests/CashFlow.Modules.Consolidation.UnitTests.csproj" />
     <Project Path="tests/CashFlow.Modules.Transactions.UnitTests/CashFlow.Modules.Transactions.UnitTests.csproj" />
   </Folder>
 </Solution>

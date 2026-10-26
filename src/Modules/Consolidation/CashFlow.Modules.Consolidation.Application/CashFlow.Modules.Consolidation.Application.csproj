@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CashFlow.Modules.Consolidation.Domain\CashFlow.Modules.Consolidation.Domain.csproj" />
+    <ProjectReference Include="..\CashFlow.Modules.Consolidation.IntegrationEvents\CashFlow.Modules.Consolidation.IntegrationEvents.csproj" />
+    <ProjectReference Include="..\..\..\Common\CashFlow.Common.Application\CashFlow.Common.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only the abstractions: a handler names DbSet<T> through
+         IConsolidationDbContext, never a provider. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Handlers are internal sealed (an architecture test enforces it). -->
+    <InternalsVisibleTo Include="CashFlow.Modules.Consolidation.UnitTests" />
+    <InternalsVisibleTo Include="CashFlow.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

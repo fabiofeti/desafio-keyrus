@@ -1,0 +1,17 @@
+[19:33:41] 1. stack up
+[19:33:57]    api healthy at http://localhost:18080
+[19:33:58] 2. baseline for 2026-10-29
+[19:33:59]    credits=1619973 debits=880977 (cents), events so far=100
+[19:33:59] 3. stop the worker
+[19:33:59] 4. post 100 transactions with the worker down
+[19:34:01]    100/100 POST 201 in 1709 ms; outbox pending for 2026-10-29=100
+[19:34:01]    expected delta: credits=+1619973 debits=+880977 (cents)
+[19:34:01]    balance unchanged while the worker is down (read still answers 200)
+[19:34:01] 5. start the worker and wait for convergence (timeout 120s)
+[19:34:06]    converged in 2 s
+[19:34:11] 6. exact sum, empty outbox, one inbox row per event
+[19:34:12]    final credits/debits (cents)=3239946 1761954 want=3239946 1761954; outbox pending=0; events=200; inbox rows=200
+[19:34:12] 7. redeliver an event that was already applied
+[19:34:14]    event 01a17a59-65b2-7583-862f-498517f11e32 redelivered: balance=3239946 1761954 inbox rows=200 dlq 0->0
+[19:34:14]    worker logged: Event 01a17a59-65b2-7583-862f-498517f11e32 was already applied; ignoring the redelivery
+[19:34:14] PASS: 100 transactions with the worker down, converged exactly, redelivery ignored

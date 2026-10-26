@@ -38,7 +38,15 @@ dotnet test CashFlow.slnx --filter "Category!=Integration"     # só arquitetura
 docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.transaction-created.v1
 ```
 
-**Status:** lançamentos (`POST`/`GET /transactions`), Outbox → RabbitMQ → Inbox e saldo diário consolidado prontos e testados; faltam `GET /daily-balances/{date}`, teste de falha do Worker, carga de 50 RPS e o README final (ver [plano](docs/IMPLEMENTATION-PLAN.md)).
+**Teste de falha (Worker parado).** Com a stack no ar, [tests/chaos/worker-down.sh](tests/chaos/worker-down.sh) para o Worker, envia 100 lançamentos, religa o Worker, confere a soma exata no `GET /daily-balances/{date}`, Outbox vazia e uma linha na Inbox por evento, e republica um evento já aplicado para provar que a redelivery não muda o saldo. Sai com código ≠ 0 na primeira expectativa quebrada.
+
+```bash
+BASE_URL=http://localhost:8080 tests/chaos/worker-down.sh    # opcionais: DATE, N, TIMEOUT, MGMT_URL
+```
+
+Resultado observado (2026-10-26, duas execuções): 100/100 POST `201` com o Worker parado (~1,7 s), 100 linhas pendentes na Outbox, saldo inalterado; convergência em ~2 s após religar, soma exata, Outbox 0 pendente, Inbox = eventos; redelivery ignorada, DLQ 0 → 0. Log em [tests/chaos/results/worker-down.log](tests/chaos/results/worker-down.log).
+
+**Status:** lançamentos (`POST`/`GET /transactions`), Outbox → RabbitMQ → Inbox, `GET /daily-balances/{date}` e teste de falha do Worker prontos e verificados; faltam a carga de 50 RPS e o README final (ver [plano](docs/IMPLEMENTATION-PLAN.md)).
 
 ## Documentação
 - [Plano de implementação](docs/IMPLEMENTATION-PLAN.md)

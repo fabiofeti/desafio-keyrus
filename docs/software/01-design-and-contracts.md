@@ -1,27 +1,34 @@
 # Software — design, persistência e contratos
 
-## Estrutura sugerida
+## Estrutura
 ```text
 src/
-  CashFlow.Api/               # HTTP endpoints + DI
-  CashFlow.Worker/            # outbox publisher + consolidation consumer
-  Modules/Transactions/       # domain, application, infrastructure
-  Modules/Consolidation/      # domain, application, infrastructure
-  Shared.Contracts/           # TransactionCreated.v1
- tests/
-  CashFlow.UnitTests/
+  Api/CashFlow.Api/                 # host HTTP; endpoints descobertos nos módulos; modo --migrate
+  Worker/CashFlow.Worker/           # host de background: outbox publisher + consumer da consolidação
+  Hosting/CashFlow.Hosting/         # lista de módulos, compartilhada pelos dois hosts
+  Common/CashFlow.Common.*/         # Domain, Application, Infrastructure, Presentation
+  Modules/Transactions/             # Domain, Application, Infrastructure, Presentation, IntegrationEvents
+  Modules/Consolidation/            # idem
+tests/
+  CashFlow.ArchitectureTests/
+  CashFlow.Modules.{Module}.UnitTests/
   CashFlow.IntegrationTests/
 ```
+O contrato `TransactionCreated.v1` vive em `CashFlow.Modules.Transactions.IntegrationEvents` (papel do antigo `Shared.Contracts`): é o único assembly de um módulo que outro módulo pode referenciar.
 API referencia módulos para expor endpoints; Worker referencia os mesmos assemblies para executar handlers, **sem duplicar domínio**. O Worker não deve receber permissão de escrita cruzada por usar ambos: configurar DbContexts com roles específicas e manter handlers separados.
 
-## Contratos HTTP (proposta)
+## Contratos HTTP
 `POST /transactions` com header `Idempotency-Key` e JSON:
 ```json
 {"type":"Credit","amount":125.50,"occurredAt":"2026-10-26T10:00:00-03:00","description":"Venda"}
 ```
-Retorno 201 com `id`, `type`, `amount`, `occurredAt`; repetição da mesma chave retorna resultado estável; chave com payload diferente retorna 409.
+Retorno `201`, `Location: /transactions/{id}` e corpo `id`, `type`, `amount`, `occurredAt` (normalizado para UTC), `businessDate` (dia no fuso `America/Sao_Paulo`, configurável em `BusinessCalendar:TimeZone`), `description`.
+- Mesma chave e mesmo payload: o mesmo corpo, `201`, header `Idempotency-Replayed: true`. O payload é comparado normalizado (valor com duas casas, instante em UTC).
+- Mesma chave e payload diferente: `409`, `code: Transactions.IdempotencyKeyReused`.
+- Duas requisições simultâneas com a mesma chave: uma grava, a outra é tratada como repetição (índice único + releitura, sem retry).
+- Sem chave, chave fora de `[A-Za-z0-9_-]{1,100}`, `type` diferente de `Credit`/`Debit`, `amount` ≤ 0, com mais de 2 casas ou acima de 999.999.999,99, `description` com mais de 200 caracteres, ou JSON inválido: `400` (problem details com `code`).
 
-`GET /transactions?date=2026-10-26` retorna coleção paginável de lançamentos.
+`GET /transactions?date=2026-10-26&page=1&pageSize=50` retorna `{"items":[…],"page":1,"pageSize":50,"totalCount":N}`, ordenado por `occurredAt` e `id`. `page` ≥ 1, `pageSize` entre 1 e 200 (padrão 50); data ausente ou fora de `YYYY-MM-DD`: `400`. Data sem lançamentos: `200` com `items` vazio.
 
 `GET /daily-balances/2026-10-26` retorna:
 ```json
@@ -30,11 +37,11 @@ Retorno 201 com `id`, `type`, `amount`, `occurredAt`; repetição da mesma chave
 Se não houver lançamentos, definir comportamento estável (zero ou 404) e testar. Não prometer leitura sincronizada com POST.
 
 ## Evento
-`TransactionCreated.v1`: `eventId`, `transactionId`, `type`, `amount`, `businessDate`, `occurredAt`, `version`, `correlationId`. Publicação persistente com confirmação. Evitar dados pessoais desnecessários.
+`TransactionCreated.v1` (`type` da mensagem `transactions.transaction-created.v1`): `id` (eventId, chave de deduplicação), `occurredOnUtc`, `transactionId`, `type`, `amount`, `businessDate`, `occurredAt`, `version`, `correlationId`. Publicação persistente com confirmação. Evitar dados pessoais desnecessários.
 
 ## Persistência
-- `transactions.transactions`: PK UUID, tipo, valor decimal, data, idempotency_key única, created_at.
-- `transactions.outbox_messages`: event_id único, payload, created_at, published_at, attempt_count.
+- `transactions.transactions`: `id` uuid (v7), `type`, `amount numeric(18,2)`, `occurred_at`, `business_date` (indexada), `description`, `idempotency_key` (única), `request_fingerprint`, `created_at_utc`.
+- `transactions.outbox_messages`: `id` uuid (= eventId), `type`, `payload jsonb`, `correlation_id`, `occurred_on_utc`, `published_on_utc`, `attempt_count`, `last_error`; índice parcial nos não publicados.
 - `consolidation.daily_balances`: business_date PK, credits, debits, updated_at.
 - `consolidation.inbox_messages`: event_id PK, processed_at.
 - DbContexts/migrations separados; grants por role (`transactions_app` e `consolidation_app`).

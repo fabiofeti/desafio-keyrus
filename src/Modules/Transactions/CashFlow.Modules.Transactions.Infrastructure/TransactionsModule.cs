@@ -1,5 +1,7 @@
 using CashFlow.Modules.Transactions.Application.Abstractions.Data;
+using CashFlow.Modules.Transactions.Application.Abstractions.Time;
 using CashFlow.Modules.Transactions.Infrastructure.Database;
+using CashFlow.Modules.Transactions.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +28,9 @@ public static class TransactionsModule
         services.AddDbContext<TransactionsDbContext>(options => ConfigureDbContext(options, connectionString));
         services.AddScoped<ITransactionsDbContext>(sp => sp.GetRequiredService<TransactionsDbContext>());
         services.AddScoped<ITransactionsUnitOfWork>(sp => sp.GetRequiredService<TransactionsDbContext>());
+
+        services.Configure<BusinessCalendarOptions>(configuration.GetSection(BusinessCalendarOptions.SectionName));
+        services.AddSingleton<IBusinessCalendar, BusinessCalendar>();
 
         return services;
     }

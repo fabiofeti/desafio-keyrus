@@ -33,6 +33,23 @@ public sealed class UnhandledExceptionHandler(ILogger<UnhandledExceptionHandler>
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // Binding failures - a malformed date in the query, unreadable JSON, a
+        // missing required parameter - are the client's error, not ours: a 400
+        // in the same problem shape, logged as information, not as an error.
+        if (exception is BadHttpRequestException badRequest)
+        {
+            logger.LogInformation(
+                "Rejected request for {Method} {Path}: {Reason}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                badRequest.Message);
+
+            await ApiResults.Problem(Result.Failure(Error.Problem("Request.Invalid", badRequest.Message)))
+                .ExecuteAsync(httpContext);
+
+            return true;
+        }
+
         logger.LogError(
             exception,
             "Unhandled exception outside the command/query pipeline for {Method} {Path}",

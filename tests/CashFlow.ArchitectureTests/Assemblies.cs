@@ -30,11 +30,11 @@ public static class Assemblies
     [
         new(
             "Transactions",
-            typeof(CashFlow.Modules.Transactions.Domain.TransactionsDomain).Assembly,
+            typeof(CashFlow.Modules.Transactions.Domain.Transactions.Transaction).Assembly,
             typeof(CashFlow.Modules.Transactions.Application.Abstractions.Data.ITransactionsDbContext).Assembly,
             typeof(CashFlow.Modules.Transactions.Infrastructure.TransactionsModule).Assembly,
             typeof(CashFlow.Modules.Transactions.Presentation.TransactionsPresentation).Assembly,
-            typeof(CashFlow.Modules.Transactions.IntegrationEvents.TransactionsIntegrationEvents).Assembly),
+            typeof(CashFlow.Modules.Transactions.IntegrationEvents.TransactionCreatedIntegrationEvent).Assembly),
         new(
             "Consolidation",
             typeof(CashFlow.Modules.Consolidation.Domain.ConsolidationDomain).Assembly,

@@ -1,3 +1,7 @@
+using CashFlow.Common.Application.Outbox;
+using CashFlow.Modules.Transactions.Domain.Transactions;
+using Microsoft.EntityFrameworkCore;
+
 namespace CashFlow.Modules.Transactions.Application.Abstractions.Data;
 
 /// <summary>
@@ -7,6 +11,15 @@ namespace CashFlow.Modules.Transactions.Application.Abstractions.Data;
 /// </summary>
 /// <remarks>
 /// Also the type <c>Hosting.Modules.ApplicationAssemblies</c> names to find
-/// this assembly. DbSets are added with each aggregate.
+/// this assembly.
 /// </remarks>
-public interface ITransactionsDbContext;
+public interface ITransactionsDbContext
+{
+    DbSet<Transaction> Transactions { get; }
+
+    /// <summary>
+    /// Written by the same <c>SaveChangesAsync</c> as the transaction it
+    /// describes, and drained by the Worker's outbox publisher.
+    /// </summary>
+    DbSet<OutboxMessage> OutboxMessages { get; }
+}

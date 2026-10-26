@@ -8,13 +8,14 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Módulos `Transactions` e `Consolidation` via `add-module`: cinco projetos cada em `src/Modules/{Module}`, `{Module}DbContext` (schema, connection string e role próprias, histórico de migrations no próprio schema), registro na API (`Add{Module}Module`), no Worker (`Add{Module}Worker`), no migrator e nos testes de arquitetura; projetos `CashFlow.Modules.{Module}.UnitTests`.
 - Lançamentos (`add-entity` + `add-feature`): agregado `Transaction` imutável, `OutboxMessage` no `TransactionsDbContext`, migration `Add_Transactions_And_Outbox`; `POST /transactions` (Idempotency-Key, replay, 409, corrida resolvida pelo índice único) grava lançamento e `TransactionCreated.v1` na Outbox no mesmo `SaveChangesAsync`; `GET /transactions?date=` paginado. Falhas de binding (data/JSON inválidos) passaram a responder 400 em vez de 500.
 - Integração entre módulos (`add-integration-event`): `OutboxProcessor`/`OutboxPublisher` no Worker (`FOR UPDATE SKIP LOCKED`, marca só após confirm, para no primeiro erro); `DailyBalance` + `InboxMessage` e migration `Add_Daily_Balances_And_Inbox`; consumer `consolidation.transaction-created.v1` → `ApplyTransactionToDailyBalanceCommand` → uma instrução SQL atômica (Inbox + incremento). Consolidation referencia só `Transactions.IntegrationEvents`.
+- Carga (`add-challenge`): `tests/load/daily-balances.js` (k6, 50/s por 2 min, critério de perda fixado no script) executado com o Worker ligado e parado; resultados e limites da medição na evidência.
 - Teste de falha (`add-challenge`): `tests/chaos/worker-down.sh` para o Worker, envia N lançamentos, religa, confere soma exata, Outbox vazia, Inbox = eventos e redelivery ignorada (management API + log do Worker).
 - Cobertura revisada (`add-challenge`): mapa de testes por regra na evidência; novos testes de atomicidade lançamento + Outbox (trigger que recusa a Outbox; validado por mutação) e de escrita cruzada nas tabelas reais.
 - Saldo diário (`add-feature`): `GET /daily-balances/{date}` lê só `consolidation.daily_balances` pelo `IConsolidationDbContext`; dia sem lançamento = 200 com zeros e `lastUpdatedAt: null`; `consistency: "eventual"`; data inválida 400.
 - DLQ (antecipada do P2 a pedido): fila quorum com `x-delivery-limit` e dead-letter at-least-once para `consolidation.transaction-created.v1.dlq`; consumer usa `basic.reject` com requeue (o `nack` não conta para o limite no RabbitMQ 4).
 - Etapa (1) via `scaffold-solution`: `CashFlow.slnx`, `Common.*`, `CashFlow.Hosting/Modules.cs` (lista de módulos), `CashFlow.Api` (endpoints descobertos por scanning; modo `--migrate`), `CashFlow.Worker` (mensageria RabbitMQ com confirms + Polly), testes de arquitetura (15) e de integração (16), Dockerfiles, Compose e `deploy/postgres/init/01-roles.sh`.
 
-**Placar na última sessão:** `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` 126/126 (15 arquitetura, 34 Transactions, 19 Consolidation, 58 integração). Compose validado de ponta a ponta, inclusive o `GET /daily-balances` e o teste de falha do Worker, e deixado parado (`docker compose stop`, volumes mantidos).
+**Placar na última sessão:** `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` 126/126 (15 arquitetura, 34 Transactions, 19 Consolidation, 58 integração). Compose validado de ponta a ponta, inclusive o `GET /daily-balances`, o teste de falha do Worker e a carga de 50 RPS, e deixado parado (`docker compose stop`, volumes mantidos).
 
 **Observações em aberto** (registradas, sem ação decidida):
 - Imagem do Worker sem `tzdata`; hoje só o POST (API) usa `IBusinessCalendar`. Vira bug se um handler do Worker passar a usar.
@@ -23,8 +24,7 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Se o publisher rodar antes de o consumer declarar a fila, o broker devolve `NO_ROUTE`; a linha fica na Outbox e sai no ciclo seguinte (`attempt_count` sobe).
 
 **Próximos passos, em ordem:**
-1. `/add-challenge` para a carga de 50 RPS em `GET /daily-balances/{date}` (k6 pela imagem `grafana/k6` na rede do Compose; também com o Worker parado).
-2. README final com portas, URLs, curl, comandos e resultados observados.
+1. README final com portas, URLs, curl, comandos e resultados observados.
 
 Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registrada antes de marcar `[x]`.
 
@@ -39,7 +39,7 @@ Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registra
 - [x] `GET /daily-balances/{date}` devolve créditos, débitos e saldo (com indicação de atualização eventual). *(Evidência: `GetDailyBalanceQueryHandlerTests`, `DailyBalancesTests` e smoke no Compose — [testes](software/03-testing.md#evidência).)*
 - [x] Unitários e integração para regras, isolamento e idempotência. *(Revisão da cobertura + duas lacunas fechadas: atomicidade lançamento/Outbox sob falha e escrita cruzada nas tabelas reais — [testes](software/03-testing.md#evidência).)*
 - [x] Teste de falha: parar worker, criar lançamentos, reiniciar, verificar convergência sem duplicação. *(Evidência: `tests/chaos/worker-down.sh`, PASS em duas execuções — [testes](software/03-testing.md#evidência).)*
-- [ ] Executar carga de 50 RPS na leitura de consolidados; medir perda, latência, erros e janela de teste.
+- [x] Executar carga de 50 RPS na leitura de consolidados; medir perda, latência, erros e janela de teste. *(Evidência: k6 2 min a 50/s, Worker ligado e parado, perda 0,00%, p99 < 3 ms localmente — [testes](software/03-testing.md#evidência).)*
 - [ ] Atualizar README com portas, URLs, curl, comandos e resultados observados.
 
 ## P1 — se houver tempo

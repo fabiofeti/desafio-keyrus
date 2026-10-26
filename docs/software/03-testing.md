@@ -24,6 +24,10 @@ Testar `GET /daily-balances/{date}` por janela representativa (por exemplo 2 min
 
 **Critério proposto de perda HTTP:** `(requisições sem resposta válida / requisições enviadas) * 100 <= 5%`; separar erros funcionais 4xx de falhas técnicas e definir a interpretação antes de executar. O enunciado não fixa percentil de latência; usar metas internas identificadas como propostas.
 
+**Interpretação fixada antes da execução** (no cabeçalho de [tests/load/daily-balances.js](../../tests/load/daily-balances.js)): resposta válida = HTTP `200` com o JSON do saldo da data pedida, em até 2 s. 5xx, timeout e erro de conexão contam como perda; 4xx é contado à parte; iterações descartadas pelo gerador (`dropped_iterations`) também seriam perda. Metas internas propostas, não do enunciado: p95 < 300 ms, p99 < 800 ms.
+
+**Ambiente e limites da medição:** AMD Ryzen 7 5700X (16 threads), 16 GB, WSL2 (kernel 6.6.87.2), Docker 29.2.0, k6 v2.3.0 (`grafana/k6`). Gerador e sistema na mesma máquina; uma única data (linha quente no cache do PostgreSQL, busca por PK), sem escritas concorrentes, um processo de API. Os números provam o requisito **neste ambiente local**; não são uma projeção de produção nem de latência em nuvem.
+
 ## Evidência
 Preencher após rodar:
 | Cenário | Comando/script | Resultado | Evidência |
@@ -51,6 +55,7 @@ Preencher após rodar:
 | Escrita cruzada nas tabelas reais | `DatabaseRoleTests.Role_Should_NotWrite_TheOtherModulesRealTables` | 5/5 passaram (2026-10-26) | `transactions_app`: INSERT/UPDATE em `consolidation.daily_balances` e INSERT em `inbox_messages` → `42501`; `consolidation_app`: INSERT em `transactions.transactions` e `outbox_messages` → `42501` |
 | Queda Worker (Compose real) | `BASE_URL=http://localhost:18080 tests/chaos/worker-down.sh` (N=100, data 2026-10-29) | **PASS** em duas execuções seguidas (2026-10-26). 1ª: baseline 0/0; 2ª: baseline 16.199,73/8.809,77 — 100/100 POST `201` em ~1,7 s com o Worker parado; 100 linhas pendentes na Outbox para a data; saldo inalterado e `GET` respondendo 200; após `start worker`, convergência em ~2 s para baseline + soma calculada pelo script (+16.199,73 créditos, +8.809,77 débitos); estável 5 s depois; Outbox 0 pendente; Inbox = eventos (100, depois 200) | Redelivery: o último evento republicado pela management API (`routed: true`); fila drenou, saldo e Inbox inalterados, DLQ 0 → 0, Worker registrou `Event … was already applied; ignoring the redelivery`. Log: [worker-down.log](../../tests/chaos/results/worker-down.log). Ambiente: WSL2, Docker local, API em 18080 |
 | Queda broker | Pendente | Não executado | — |
-| Carga 50 RPS | Pendente | Não executado | — |
+| Carga 50 RPS — Worker ligado | k6 `constant-arrival-rate` 50/s por 2 min, [tests/load/daily-balances.js](../../tests/load/daily-balances.js), `DATE=2026-10-29`, na rede `cashflow_default` (`http://api:8080`) | **PASS** (2026-10-26, 23:34:59–23:36:59 UTC): esperadas ~6000, enviadas 6001, 0 descartadas; 6001 `200` válidas; 0 4xx, 0 5xx, 0 erros de transporte/timeout; **perda 0,00%**; RPS efetivo 50,09; p50 1,44 ms, p95 1,99 ms, p99 2,54 ms, máx. 89,1 ms | Thresholds: válidas ≥ 95% ✓, p95 < 300 ms ✓, p99 < 800 ms ✓. [log](../../tests/load/results/worker-up.log), [JSON](../../tests/load/results/worker-up.json) |
+| Carga 50 RPS — Worker parado | Mesmo script, após `docker compose stop worker` | **PASS** (2026-10-26, 23:37:07–23:39:08 UTC): enviadas 6000, 0 descartadas; 6000 `200` válidas; 0 4xx/5xx/transporte; **perda 0,00%**; RPS 50,08; p95 1,87 ms, p99 2,46 ms, máx. 7,5 ms | A leitura do consolidado não depende do processamento estar vivo. [log](../../tests/load/results/worker-down.log), [JSON](../../tests/load/results/worker-down.json) |
 
 Não marcar sucesso sem execução.

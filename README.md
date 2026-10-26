@@ -46,7 +46,17 @@ BASE_URL=http://localhost:8080 tests/chaos/worker-down.sh    # opcionais: DATE, 
 
 Resultado observado (2026-10-26, duas execuções): 100/100 POST `201` com o Worker parado (~1,7 s), 100 linhas pendentes na Outbox, saldo inalterado; convergência em ~2 s após religar, soma exata, Outbox 0 pendente, Inbox = eventos; redelivery ignorada, DLQ 0 → 0. Log em [tests/chaos/results/worker-down.log](tests/chaos/results/worker-down.log).
 
-**Status:** lançamentos (`POST`/`GET /transactions`), Outbox → RabbitMQ → Inbox, `GET /daily-balances/{date}` e teste de falha do Worker prontos e verificados; faltam a carga de 50 RPS e o README final (ver [plano](docs/IMPLEMENTATION-PLAN.md)).
+**Carga de 50 RPS no consolidado.** [tests/load/daily-balances.js](tests/load/daily-balances.js) (k6, `constant-arrival-rate` 50/s por 2 min), executado pela imagem do k6 na rede do Compose:
+
+```bash
+docker run --rm -i --network cashflow_default -u "$(id -u)" \
+  -e BASE_URL=http://api:8080 -e DATE=2026-10-29 -v "$PWD/tests/load:/scripts" \
+  grafana/k6 run --summary-export=/scripts/results/worker-up.json /scripts/daily-balances.js
+```
+
+Resultado observado (2026-10-26, máquina local WSL2): com o Worker ligado, 6001 requisições, 6001 `200` válidas, **perda 0,00%**, p95 1,99 ms, p99 2,54 ms; com o Worker parado, 6000/6000, perda 0,00%, p95 1,87 ms, p99 2,46 ms. Gerador e sistema na mesma máquina, uma data só e sem escritas concorrentes: o número vale para este ambiente, não é projeção de produção ([critério, ambiente e limites](docs/software/03-testing.md#carga-50-rps)).
+
+**Status:** lançamentos (`POST`/`GET /transactions`), Outbox → RabbitMQ → Inbox, `GET /daily-balances/{date}`, teste de falha do Worker e carga de 50 RPS prontos e verificados; falta o README final (ver [plano](docs/IMPLEMENTATION-PLAN.md)).
 
 ## Documentação
 - [Plano de implementação](docs/IMPLEMENTATION-PLAN.md)

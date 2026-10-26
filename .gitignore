@@ -1,0 +1,20 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/
+
+# Segredos locais (regra 8): só o .env.example entra no Git
+.env
+
+# Material do case fornecido pela Keyrus: fica local
+Case - *.pdf
+
+# Claude Code: estado local
+.claude/settings.local.json
+.claude/.last-verify
+
+# Resultados brutos de carga (o resumo vai para a documentação)
+tests/load/results/*.json

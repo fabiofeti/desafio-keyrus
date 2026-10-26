@@ -5,14 +5,22 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 
 **Pronto e verificado** (evidência em [03-testing](software/03-testing.md#evidência)):
 - Convenções do monólito modular em `.claude/` (skills, comandos `/verify` e `/next-item`, hooks de fronteira entre módulos, segredos e verificação ao fim do turno).
-- Módulos `Transactions` e `Consolidation` via `add-module`: cinco projetos cada em `src/Modules/{Module}`, `{Module}DbContext` (schema, connection string e role próprias, histórico de migrations no próprio schema), registro na API (`Add{Module}Module`), no Worker (`Add{Module}Worker`), no migrator e nos testes de arquitetura; projetos `CashFlow.Modules.{Module}.UnitTests`. Nenhuma referência entre os módulos ainda (a de Consolidation para `Transactions.IntegrationEvents` vem com o evento).
+- Módulos `Transactions` e `Consolidation` via `add-module`: cinco projetos cada em `src/Modules/{Module}`, `{Module}DbContext` (schema, connection string e role próprias, histórico de migrations no próprio schema), registro na API (`Add{Module}Module`), no Worker (`Add{Module}Worker`), no migrator e nos testes de arquitetura; projetos `CashFlow.Modules.{Module}.UnitTests`.
 - Lançamentos (`add-entity` + `add-feature`): agregado `Transaction` imutável, `OutboxMessage` no `TransactionsDbContext`, migration `Add_Transactions_And_Outbox`; `POST /transactions` (Idempotency-Key, replay, 409, corrida resolvida pelo índice único) grava lançamento e `TransactionCreated.v1` na Outbox no mesmo `SaveChangesAsync`; `GET /transactions?date=` paginado. Falhas de binding (data/JSON inválidos) passaram a responder 400 em vez de 500.
 - Integração entre módulos (`add-integration-event`): `OutboxProcessor`/`OutboxPublisher` no Worker (`FOR UPDATE SKIP LOCKED`, marca só após confirm, para no primeiro erro); `DailyBalance` + `InboxMessage` e migration `Add_Daily_Balances_And_Inbox`; consumer `consolidation.transaction-created.v1` → `ApplyTransactionToDailyBalanceCommand` → uma instrução SQL atômica (Inbox + incremento). Consolidation referencia só `Transactions.IntegrationEvents`.
 - DLQ (antecipada do P2 a pedido): fila quorum com `x-delivery-limit` e dead-letter at-least-once para `consolidation.transaction-created.v1.dlq`; consumer usa `basic.reject` com requeue (o `nack` não conta para o limite no RabbitMQ 4).
 - Etapa (1) via `scaffold-solution`: `CashFlow.slnx`, `Common.*`, `CashFlow.Hosting/Modules.cs` (lista de módulos), `CashFlow.Api` (endpoints descobertos por scanning; modo `--migrate`), `CashFlow.Worker` (mensageria RabbitMQ com confirms + Polly), testes de arquitetura (15) e de integração (16), Dockerfiles, Compose e `deploy/postgres/init/01-roles.sh`.
 
+**Placar na última sessão:** `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` 112/112 (15 arquitetura, 34 Transactions, 16 Consolidation, 47 integração). Compose validado de ponta a ponta e deixado parado (`docker compose stop`, volumes mantidos).
+
+**Observações em aberto** (registradas, sem ação decidida):
+- Imagem do Worker sem `tzdata`; hoje só o POST (API) usa `IBusinessCalendar`. Vira bug se um handler do Worker passar a usar.
+- Limites de `description` (200) e valor máximo só no validator, não no agregado `Transaction`.
+- Com `DeliveryLimit` 5, uma mensagem envenenada leva ~40 s de backoff até a DLQ e segura a fila nesse intervalo; replay da DLQ é manual.
+- Se o publisher rodar antes de o consumer declarar a fila, o broker devolve `NO_ROUTE`; a linha fica na Outbox e sai no ciclo seguinte (`attempt_count` sobe).
+
 **Próximos passos, em ordem:**
-1. `/add-feature` para `GET /daily-balances/{date}`.
+1. `/add-feature` para `GET /daily-balances/{date}` (lê só `consolidation.daily_balances`; dia sem lançamento = 200 com zeros e `lastUpdatedAt: null`; `consistency: "eventual"`).
 2. `/add-challenge` para os testes de falha e a carga de 50 RPS; README final.
 
 Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registrada antes de marcar `[x]`.

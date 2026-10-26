@@ -136,6 +136,10 @@ encontra a classe.
 ### 5. Migration
 
 ```bash
+# O design-time sobe o host da API, que exige a connection string de cada
+# módulo; um valor fictício basta (nenhuma conexão é aberta para gerar).
+ConnectionStrings__Transactions="Host=localhost;Database=design" \
+ConnectionStrings__Consolidation="Host=localhost;Database=design" \
 dotnet ef migrations add Add_Transactions \
   --project src/Modules/Transactions/CashFlow.Modules.Transactions.Infrastructure \
   --startup-project src/Api/CashFlow.Api \
@@ -147,7 +151,8 @@ Nome `PascalCase_With_Underscores`. Se o `dotnet ef` não estiver instalado:
 `dotnet tool install --global dotnet-ef` (peça ao usuário antes). Gere a migration
 pelo comando; **nunca** edite o `ModelSnapshot` à mão. Cada módulo tem a própria
 pasta de migrations e o próprio histórico; gerar duas migrations em paralelo no
-mesmo contexto quebra o snapshot.
+mesmo contexto quebra o snapshot. Depois de gerar, confira com
+`dotnet ef migrations has-pending-model-changes` (mesmos parâmetros e variáveis).
 
 ## Os agregados que este desafio precisa
 

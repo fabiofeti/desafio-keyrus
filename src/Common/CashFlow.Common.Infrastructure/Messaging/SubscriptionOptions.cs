@@ -13,4 +13,8 @@ public sealed record SubscriptionOptions<TEvent>(
     string RoutingKey,
     string Queue,
     string MessageType)
-    where TEvent : IIntegrationEvent;
+    where TEvent : IIntegrationEvent
+{
+    /// <summary>Where the broker parks what this subscription could not process.</summary>
+    public string DeadLetterQueue => $"{Queue}.dlq";
+}

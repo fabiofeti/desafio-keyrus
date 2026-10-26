@@ -32,7 +32,13 @@ dotnet test CashFlow.slnx                                      # tudo; integraç
 dotnet test CashFlow.slnx --filter "Category!=Integration"     # só arquitetura/unitários
 ```
 
-**Status:** solução, camada Common, hosts, testes de arquitetura, isolamento por role e Compose prontos. Módulos Transactions e Consolidation e os endpoints do desafio ainda em implementação (ver [plano](docs/IMPLEMENTATION-PLAN.md)). Exemplos `curl` dos endpoints entram quando eles existirem.
+**Operação da fila.** A consolidação consome a fila *quorum* `consolidation.transaction-created.v1`; mensagens que falham mais de `RabbitMq__DeliveryLimit` vezes (padrão 5) vão para `consolidation.transaction-created.v1.dlq` (veja na UI de management, porta 15672) e o reprocessamento é manual. Num volume do RabbitMQ criado antes da DLQ, o Worker registra `PRECONDITION_FAILED` ao declarar a fila; com a fila antiga vazia, recrie-a uma vez:
+
+```bash
+docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.transaction-created.v1
+```
+
+**Status:** lançamentos (`POST`/`GET /transactions`), Outbox → RabbitMQ → Inbox e saldo diário consolidado prontos e testados; faltam `GET /daily-balances/{date}`, teste de falha do Worker, carga de 50 RPS e o README final (ver [plano](docs/IMPLEMENTATION-PLAN.md)).
 
 ## Documentação
 - [Plano de implementação](docs/IMPLEMENTATION-PLAN.md)

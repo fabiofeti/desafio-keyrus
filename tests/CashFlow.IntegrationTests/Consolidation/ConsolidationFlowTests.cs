@@ -108,22 +108,13 @@ public class ConsolidationFlowTests(IntegrationTestWebAppFactory factory) : Base
     [Fact]
     public async Task Publisher_Should_MarkPublishedOnlyAfterConfirm_WhenBrokerIsUnreachableAndThenBack()
     {
-        // Arrange: the consumer's queue must exist, or the broker refuses the
-        // publish as unroutable (which also keeps the row unpublished, but is not
-        // what this test is about). Same declaration as the consumer, idempotent.
-        await using (WorkerHost setup = WorkerHost.Create(Factory))
-        {
-            IConnection connection = await setup.Services.GetRequiredService<RabbitMqConnectionProvider>().GetConnectionAsync(default);
-            await using IChannel channel = await connection.CreateChannelAsync();
-            await channel.ExchangeDeclareAsync(TransactionCreatedIntegrationEvent.Exchange, ExchangeType.Topic, durable: true, autoDelete: false);
-            await channel.QueueDeclareAsync(ConsolidationModule.TransactionCreatedQueue, durable: true, exclusive: false, autoDelete: false);
-            await channel.QueueBindAsync(
-                ConsolidationModule.TransactionCreatedQueue, TransactionCreatedIntegrationEvent.Exchange, TransactionCreatedIntegrationEvent.RoutingKey);
-        }
-
-        // Drain what other tests left in the outbox, so ours is the oldest row.
+        // Arrange: a running Worker declares the consumer's queue (without it the
+        // broker refuses the publish as unroutable - which also keeps the row
+        // unpublished, but is not what this test is about) and drains what other
+        // tests left in the outbox, so ours is the oldest row.
         await using (WorkerHost drain = await WorkerHost.StartAsync(Factory))
         {
+            await EventuallyAsync(() => QueueExistsAsync(drain, ConsolidationModule.TransactionCreatedQueue));
             await EventuallyAsync(async () =>
                 await ScalarAsync("SELECT count(*) FROM transactions.outbox_messages WHERE published_on_utc IS NULL", []) == 0);
         }
@@ -159,32 +150,80 @@ public class ConsolidationFlowTests(IntegrationTestWebAppFactory factory) : Base
     }
 
     [Fact]
-    public async Task FailingHandler_Should_LeaveTheMessageUnacknowledged_AndRequeued()
+    public async Task PoisonMessage_Should_BeDeadLettered_AndNotBlockTheMessagesBehindIt()
     {
-        // Arrange: a malformed event (amount 0) that the module refuses.
+        // Arrange: a malformed event (amount 0) that the module refuses every
+        // time, followed by a valid one for the same day.
+        await using WorkerHost worker = await WorkerHost.StartAsync(Factory);
+        IRabbitMqPublisher publisher = worker.Services.GetRequiredService<IRabbitMqPublisher>();
         DateOnly date = UniqueDate();
         TransactionCreatedIntegrationEvent poison = Event(date, "Credit", 0m);
-        WorkerHost worker = await WorkerHost.StartAsync(Factory);
-        IRabbitMqPublisher publisher = worker.Services.GetRequiredService<IRabbitMqPublisher>();
+        TransactionCreatedIntegrationEvent behind = Event(date, "Credit", 33m);
+        await EventuallyAsync(() => QueueExistsAsync(worker, ConsolidationModule.TransactionCreatedQueue));
 
         // Act
         await publisher.PublishAsync(ToMessage(poison), default);
-        await Task.Delay(TimeSpan.FromSeconds(2));
-        await worker.DisposeAsync();
+        await publisher.PublishAsync(ToMessage(behind), default);
 
-        // Assert: back in the queue, flagged as redelivered, and nothing applied.
-        await using WorkerHost probe = WorkerHost.Create(Factory);
-        IConnection connection = await probe.Services.GetRequiredService<RabbitMqConnectionProvider>().GetConnectionAsync(default);
-        await using IChannel channel = await connection.CreateChannelAsync();
-        BasicGetResult? requeued = await channel.BasicGetAsync(ConsolidationModule.TransactionCreatedQueue, autoAck: true);
-
-        requeued.ShouldNotBeNull();
-        requeued.BasicProperties.MessageId.ShouldBe(poison.Id.ToString());
-        requeued.Redelivered.ShouldBeTrue();
+        // Assert: the one behind is applied, the poison is parked, never applied.
+        await EventuallyAsync(async () => await BalanceAsync(date) == (33m, 0m));
+        BasicGetResult parked = await EventuallyGetAsync(worker, DeadLetterQueue);
+        parked.BasicProperties.MessageId.ShouldBe(poison.Id.ToString());
         (await ScalarAsync("SELECT count(*) FROM consolidation.inbox_messages WHERE event_id = ANY(@ids)", [poison.Id]))
             .ShouldBe(0);
-        (await ScalarAsync("SELECT count(*) FROM consolidation.daily_balances WHERE business_date = @date", [], date))
-            .ShouldBe(0);
+        (await BalanceAsync(date)).ShouldBe((33m, 0m));
+    }
+
+    [Fact]
+    public async Task UnreadableMessage_Should_BeDeadLetteredAtOnce()
+    {
+        // Arrange
+        await using WorkerHost worker = await WorkerHost.StartAsync(Factory);
+        IRabbitMqPublisher publisher = worker.Services.GetRequiredService<IRabbitMqPublisher>();
+        await EventuallyAsync(() => QueueExistsAsync(worker, ConsolidationModule.TransactionCreatedQueue));
+        var messageId = Guid.NewGuid();
+
+        // Act: right routing key, body that is not the contract.
+        await publisher.PublishAsync(
+            new OutgoingMessage(
+                TransactionCreatedIntegrationEvent.Exchange,
+                TransactionCreatedIntegrationEvent.RoutingKey,
+                messageId,
+                TransactionCreatedIntegrationEvent.MessageType,
+                "it-correlation",
+                Encoding.UTF8.GetBytes("{ not json")),
+            default);
+
+        // Assert: parked, not dropped, and not retried first.
+        BasicGetResult parked = await EventuallyGetAsync(worker, DeadLetterQueue);
+        parked.BasicProperties.MessageId.ShouldBe(messageId.ToString());
+    }
+
+    private static string DeadLetterQueue => $"{ConsolidationModule.TransactionCreatedQueue}.dlq";
+
+    private static async Task<bool> QueueExistsAsync(WorkerHost worker, string queue)
+    {
+        IConnection connection = await worker.Services.GetRequiredService<RabbitMqConnectionProvider>().GetConnectionAsync(default);
+        await using IChannel channel = await connection.CreateChannelAsync();
+        try
+        {
+            await channel.QueueDeclarePassiveAsync(queue);
+            return true;
+        }
+        catch (RabbitMQ.Client.Exceptions.OperationInterruptedException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Takes (and acknowledges) the first message the queue receives within the window.</summary>
+    private static async Task<BasicGetResult> EventuallyGetAsync(WorkerHost worker, string queue)
+    {
+        IConnection connection = await worker.Services.GetRequiredService<RabbitMqConnectionProvider>().GetConnectionAsync(default);
+        await using IChannel channel = await connection.CreateChannelAsync();
+        BasicGetResult? result = null;
+        await EventuallyAsync(async () => (result = await channel.BasicGetAsync(queue, autoAck: true)) is not null);
+        return result!;
     }
 
     private static int _dayOffset;

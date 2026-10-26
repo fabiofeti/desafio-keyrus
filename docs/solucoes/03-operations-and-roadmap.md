@@ -9,6 +9,7 @@ Healthchecks para API, PostgreSQL e RabbitMQ; readiness distinta de liveness. Lo
 | Worker parado | Eventos persistidos, fila durável, reprocessamento |
 | RabbitMQ indisponível | Outbox persiste no banco; publisher retenta com limites |
 | Mensagem duplicada | Inbox/constraint única e transação atômica |
+| Mensagem que sempre falha (poison) | Fila quorum com limite de entregas; após o limite vai para `consolidation.transaction-created.v1.dlq` e a fila segue; monitorar profundidade da DLQ e reprocessar manualmente |
 | Banco indisponível | Limitação do MVP; backup/HA em produção |
 | Crescimento da fila | Monitorar lag, escalar consumidores, avaliar backpressure |
 | Dados temporariamente desatualizados | Informar consistência eventual no contrato de leitura |
@@ -20,4 +21,4 @@ Ambiente local: imagens gratuitas e sem licenças comerciais obrigatórias; cust
 Não se aplica: o enunciado não informa legado. Se existisse, sugerir strangler e migração gradual de lançamentos, mas não incluir implementação fictícia.
 
 ## Evoluções futuras
-Autenticação/autorização, DLQ e replay, dashboards, escalabilidade independente, HA/DR, alertas, trilhas de auditoria e isolamento físico de bancos se necessário.
+Autenticação/autorização, replay automatizado da DLQ, dashboards, escalabilidade independente, HA/DR, alertas, trilhas de auditoria e isolamento físico de bancos se necessário.

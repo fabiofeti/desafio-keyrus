@@ -4,7 +4,7 @@
 Queda do worker ou RabbitMQ não deve bloquear POST: a API persiste Transactions + Outbox sem chamada síncrona a Consolidation. Queda do PostgreSQL compartilhado afeta a escrita; documentar como trade-off.
 
 ## Polly
-Aplicar `Microsoft.Extensions.Resilience`/Polly em operações transitórias onde couber: timeout, retry exponencial com jitter, circuit breaker para conexões/publicação do broker. Evitar retry ilimitado e retry de transação não idempotente. No consumidor, falha persistente deve ter política de reentrega e, como evolução, DLQ. Um circuit breaker no publisher não interrompe a API.
+Aplicar `Microsoft.Extensions.Resilience`/Polly em operações transitórias onde couber: timeout, retry exponencial com jitter, circuit breaker para conexões/publicação do broker. Evitar retry ilimitado e retry de transação não idempotente. No consumidor, falha persistente tem reentrega com backoff limitada por `x-delivery-limit` (fila quorum) e, depois do limite, DLQ; replay automatizado da DLQ é evolução. Um circuit breaker no publisher não interrompe a API.
 
 ## Segurança
 Validação de input, limites de tamanho, SQL parametrizado/EF Core, credentials segregadas, logs sem segredos, HTTPS/TLS em produção. Autenticação JWT/OAuth2 e rate limiting avançado podem ficar documentados como evolução, se o tempo for curto.

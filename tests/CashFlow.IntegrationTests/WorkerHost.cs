@@ -28,6 +28,10 @@ internal sealed class WorkerHost : IAsyncDisposable
             ["ConnectionStrings:Transactions"] = factory.TransactionsConnectionString,
             ["ConnectionStrings:Consolidation"] = factory.ConsolidationConnectionString,
             ["Outbox:PollingInterval"] = "00:00:00.200",
+            // Fewer returns before dead-lettering, so a poison message settles in
+            // seconds. Every test host uses the same value: the limit is part of
+            // the queue's declaration in the shared broker.
+            ["RabbitMq:DeliveryLimit"] = "1",
             ["Logging:LogLevel:Default"] = "Warning"
         };
 

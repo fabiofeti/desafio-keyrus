@@ -20,5 +20,12 @@ public sealed class RabbitMqOptions
 
     public ushort PrefetchCount { get; init; } = 16;
 
+    /// <summary>
+    /// How many times a message may be returned to its queue before the broker
+    /// moves it to the subscription's dead-letter queue. Part of the queue's
+    /// declaration: changing it for an existing queue requires recreating it.
+    /// </summary>
+    public int DeliveryLimit { get; init; } = 5;
+
     public string ClientProvidedName { get; init; } = "cashflow-worker";
 }

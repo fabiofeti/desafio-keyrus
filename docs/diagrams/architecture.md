@@ -74,7 +74,7 @@ sequenceDiagram
   participant PUB as Outbox Publisher
   participant MQ as RabbitMQ
   User->>API: POST /transactions + Idempotency-Key
-  API->>DB: BEGIN; INSERT transaction + outbox; COMMIT
+  API->>DB: BEGIN, INSERT transaction + outbox, COMMIT
   DB-->>API: Commit OK
   API-->>User: 201 Created
   PUB->>DB: Buscar Outbox pendente
@@ -92,17 +92,17 @@ sequenceDiagram
   participant API as API Consolidation
   actor User as Comerciante
   MQ->>W: TransactionCreated.v1
-  W->>DB: BEGIN; INSERT Inbox (único eventId)
+  W->>DB: INSERT Inbox ON CONFLICT DO NOTHING + UPSERT saldo (uma instrução, atômica)
   alt Evento novo
-    W->>DB: UPSERT saldo diário
-    W->>DB: COMMIT
-  else Duplicado
-    W->>DB: ROLLBACK/sem incremento
+    DB-->>W: 1 linha, saldo incrementado e commitado
+  else Duplicado (mesmo eventId)
+    DB-->>W: 0 linhas, sem incremento
   end
-  W-->>MQ: ACK após confirmação do estado
+  W-->>MQ: ACK somente após o commit
+  Note over W,MQ: Falha no processamento gera NACK e o broker reentrega
   User->>API: GET /daily-balances/{date}
   API->>DB: SELECT saldo
   DB-->>API: Projeção eventual
   API-->>User: 200 + saldo + lastUpdatedAt
-  Note over MQ,W: Se Worker parar, fila retém eventos; Transactions continua gravando
+  Note over MQ,W: Se Worker parar, fila retém eventos e Transactions continua gravando
 ```

@@ -1,7 +1,7 @@
 using CashFlow.Common.Application;
 using CashFlow.Common.Infrastructure;
 using CashFlow.Common.Infrastructure.Messaging;
-using CashFlow.Hosting;
+using CashFlow.Modules.Transactions.Infrastructure;
 
 namespace CashFlow.Worker;
 
@@ -16,12 +16,13 @@ public static class WorkerComposition
     {
         services.AddCommonInfrastructure();
         services.AddMessaging(configuration);
-        services.AddApplication(Modules.ApplicationAssemblies);
-        services.AddIntegrationEventHandlers(Modules.PresentationAssemblies);
+        services.AddApplication(Hosting.Modules.ApplicationAssemblies);
+        services.AddIntegrationEventHandlers(Hosting.Modules.PresentationAssemblies);
 
         // Each module registers its background side here, each with its own
         // connection string and database role - hosting both modules never
         // grants this process cross-module write access.
+        services.AddTransactionsWorker(configuration);
 
         return services;
     }

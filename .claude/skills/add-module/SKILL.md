@@ -42,7 +42,10 @@ módulos permitida. O hook `guard-module-boundary.sh` bloqueia qualquer outra.
    a role `{module}_app` e os grants (o script é o dono das roles).
 3. **DbContext** `public sealed class {Module}DbContext : DbContext, I{Module}DbContext, I{Module}UnitOfWork`
    com `HasDefaultSchema(Schemas.{Module})` e `ApplyConfigurationsFromAssembly`.
-   Transactions também aplica `OutboxMessageConfiguration`.
+   Transactions também aplica `OutboxMessageConfiguration`, mas só no `add-entity`, junto
+   com a primeira migration: sem migration, uma entidade no modelo faz o `MigrateAsync`
+   falhar por mudanças pendentes. Domain e IntegrationEvents ainda vazios ganham uma
+   classe estática marcadora (`{Module}Domain`, `{Module}IntegrationEvents`) para o `Assemblies.cs`.
 4. **Registro** — `{Module}Module` em Infrastructure:
 
    ```csharp

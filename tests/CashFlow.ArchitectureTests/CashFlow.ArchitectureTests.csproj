@@ -28,6 +28,11 @@
 
   <!-- Module projects under test are added here by the add-module skill. -->
   <ItemGroup Label="Modules under test">
+    <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Domain\CashFlow.Modules.Transactions.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Application\CashFlow.Modules.Transactions.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Infrastructure\CashFlow.Modules.Transactions.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.Presentation\CashFlow.Modules.Transactions.Presentation.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Transactions\CashFlow.Modules.Transactions.IntegrationEvents\CashFlow.Modules.Transactions.IntegrationEvents.csproj" />
   </ItemGroup>
 
 </Project>

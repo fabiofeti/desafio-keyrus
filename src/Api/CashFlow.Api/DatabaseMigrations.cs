@@ -1,3 +1,6 @@
+using CashFlow.Modules.Transactions.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
+
 namespace CashFlow.Api;
 
 /// <summary>
@@ -15,7 +18,7 @@ internal static class DatabaseMigrations
         ILogger logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger(typeof(DatabaseMigrations));
 
-        // Module migrations are added here by the add-module skill.
+        await scope.ServiceProvider.GetRequiredService<TransactionsDbContext>().Database.MigrateAsync();
 
         logger.LogInformation("Database migrations applied");
     }

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- Common.Application only. Consolidation references this assembly, and
+         must not gain access to anything else Transactions owns through it. -->
+    <ProjectReference Include="..\..\..\Common\CashFlow.Common.Application\CashFlow.Common.Application.csproj" />
+  </ItemGroup>
+
+</Project>

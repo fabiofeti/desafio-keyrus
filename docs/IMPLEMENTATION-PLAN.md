@@ -5,15 +5,16 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 
 **Pronto e verificado** (evidência em [03-testing](software/03-testing.md#evidência)):
 - Convenções do monólito modular em `.claude/` (skills, comandos `/verify` e `/next-item`, hooks de fronteira entre módulos, segredos e verificação ao fim do turno).
+- Módulo `Transactions` via `add-module`: cinco projetos em `src/Modules/Transactions`, `TransactionsDbContext` (schema `transactions`, connection string e role próprias, histórico de migrations no próprio schema), registro na API (`AddTransactionsModule`), no Worker (`AddTransactionsWorker`), no migrator e nos testes de arquitetura; projeto `CashFlow.Modules.Transactions.UnitTests`.
 - Etapa (1) via `scaffold-solution`: `CashFlow.slnx`, `Common.*`, `CashFlow.Hosting/Modules.cs` (lista de módulos, hoje vazia), `CashFlow.Api` (endpoints descobertos por scanning; modo `--migrate`), `CashFlow.Worker` (mensageria RabbitMQ com confirms + Polly), testes de arquitetura (15) e de integração (16), Dockerfiles, Compose e `deploy/postgres/init/01-roles.sh`.
 
 **Parcial:**
-- Item 1 de P0: solução criada; faltam os módulos `Transactions` e `Consolidation`. O papel de `Shared.Contracts` será cumprido por `CashFlow.Modules.Transactions.IntegrationEvents` (padrão do monólito modular); atualizar o [doc de design](software/01-design-and-contracts.md) quando o módulo existir.
-- Item 3 de P0: schemas e roles prontos e testados; faltam DbContexts e migrations (vêm com os módulos).
+- Item 1 de P0: solução e módulo `Transactions` criados; falta o módulo `Consolidation`. O papel de `Shared.Contracts` será cumprido por `CashFlow.Modules.Transactions.IntegrationEvents` (padrão do monólito modular); atualizar o [doc de design](software/01-design-and-contracts.md) quando o módulo existir.
+- Item 3 de P0: schemas e roles prontos e testados; `TransactionsDbContext` pronto, ainda sem migration (vem com o primeiro agregado); faltam o DbContext de Consolidation e as migrations.
 
 **Próximos passos, em ordem:**
-1. `/add-module Transactions`, depois `/add-module Consolidation` (um de cada vez: ambos editam `CashFlow.slnx`, `Modules.cs` e `Assemblies.cs`).
-2. `/add-entity Transaction` + `OutboxMessage` no `TransactionsDbContext`; `/add-feature` para `POST /transactions` (idempotency key + Outbox) e `GET /transactions?date=`.
+1. `/add-module Consolidation`.
+2. `/add-entity Transaction` + `OutboxMessage` no `TransactionsDbContext` (é aqui que o contexto passa a aplicar `OutboxMessageConfiguration` e ganha a primeira migration: aplicá-la antes, sem migration, faz o `MigrateAsync` falhar por mudanças pendentes no modelo); `/add-feature` para `POST /transactions` (idempotency key + Outbox) e `GET /transactions?date=`.
 3. `/add-integration-event TransactionCreated.v1`: publisher da Outbox, consumer com Inbox atômica, `DailyBalance`.
 4. `/add-feature` para `GET /daily-balances/{date}`.
 5. `/add-challenge` para os testes de falha e a carga de 50 RPS; README final.

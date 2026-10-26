@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CashFlow.Modules.Transactions.Domain\CashFlow.Modules.Transactions.Domain.csproj" />
+    <ProjectReference Include="..\CashFlow.Modules.Transactions.IntegrationEvents\CashFlow.Modules.Transactions.IntegrationEvents.csproj" />
+    <ProjectReference Include="..\..\..\Common\CashFlow.Common.Application\CashFlow.Common.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only the abstractions: a handler names DbSet<T> through
+         ITransactionsDbContext, never a provider. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Handlers are internal sealed (an architecture test enforces it). -->
+    <InternalsVisibleTo Include="CashFlow.Modules.Transactions.UnitTests" />
+    <InternalsVisibleTo Include="CashFlow.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

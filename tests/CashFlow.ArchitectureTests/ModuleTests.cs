@@ -87,7 +87,7 @@ public class ModuleTests
             [
                 .. module.IntegrationEvents.GetReferencedAssemblies()
                     .Select(a => a.Name ?? string.Empty)
-                    .Where(name => name.StartsWith("CoreMastery.", StringComparison.Ordinal)
+                    .Where(name => name.StartsWith("CashFlow.", StringComparison.Ordinal)
                                    && !allowed.Contains(name))
             ];
 

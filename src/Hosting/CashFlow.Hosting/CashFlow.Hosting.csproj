@@ -4,6 +4,9 @@
        projects (Application, Infrastructure, Presentation) are added here by
        the add-module skill; nothing else in the solution knows the full list. -->
   <ItemGroup Label="Modules">
+    <ProjectReference Include="..\..\Modules\Transactions\CashFlow.Modules.Transactions.Application\CashFlow.Modules.Transactions.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Transactions\CashFlow.Modules.Transactions.Infrastructure\CashFlow.Modules.Transactions.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Transactions\CashFlow.Modules.Transactions.Presentation\CashFlow.Modules.Transactions.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

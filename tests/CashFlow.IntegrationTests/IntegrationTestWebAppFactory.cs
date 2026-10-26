@@ -1,4 +1,7 @@
+using CashFlow.Modules.Transactions.Infrastructure;
+using CashFlow.Modules.Transactions.Infrastructure.Database;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -60,8 +63,10 @@ public sealed class IntegrationTestWebAppFactory : WebApplicationFactory<Program
     {
         await Task.WhenAll(_postgres.StartAsync(), _rabbitMq.StartAsync());
 
-        // Module migrations are applied here, with the administrative connection
-        // and each module's ConfigureDbContext (added by the add-module skill).
+        // Migrations run as the administrative user, like the compose migrator;
+        // the API under test then connects with the restricted roles only.
+        await MigrateAsync<TransactionsDbContext>(
+            options => TransactionsModule.ConfigureDbContext(options, AdminConnectionString));
     }
 
     public new async Task DisposeAsync()
@@ -75,6 +80,16 @@ public sealed class IntegrationTestWebAppFactory : WebApplicationFactory<Program
     {
         builder.UseSetting("ConnectionStrings:Transactions", TransactionsConnectionString);
         builder.UseSetting("ConnectionStrings:Consolidation", ConsolidationConnectionString);
+    }
+
+    private static async Task MigrateAsync<TContext>(Action<DbContextOptionsBuilder> configure)
+        where TContext : DbContext
+    {
+        var builder = new DbContextOptionsBuilder<TContext>();
+        configure(builder);
+
+        await using var context = (TContext)Activator.CreateInstance(typeof(TContext), builder.Options)!;
+        await context.Database.MigrateAsync();
     }
 
     private string ConnectionStringFor(string role, string password) =>

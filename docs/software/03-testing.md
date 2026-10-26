@@ -31,7 +31,8 @@ Preencher após rodar:
 | Arquitetura (camadas, registro de módulos, hosts) | `dotnet test tests/CashFlow.ArchitectureTests` | 15/15 passaram (2026-10-26) | Inclui: API sem dependência do broker; Worker sem mapear endpoint; Common sem referência a módulo |
 | Isolamento por role (sem módulos ainda) | `dotnet test tests/CashFlow.IntegrationTests` — `DatabaseRoleTests` | 10/10 passaram (2026-10-26) | Com o script real de init: cada role lê/grava o próprio schema; `42501` ao ler/gravar o outro, ao `DELETE` e ao `CREATE TABLE` |
 | Publisher com confirms (base) | `RabbitMqPublisherTests` | 2/2 passaram (2026-10-26) | Mensagem persistente com id/tipo/correlation; publish sem fila ligada lança `PublishException` |
-| Compose sobe | `docker compose up --build -d` | migrator `Exited (0)`, api healthy, worker/postgres/rabbitmq up; `/health` e `/openapi/v1.json` 200 (2026-10-26) | Portas do host configuráveis no `.env` |
+| Módulo Transactions registrado | `dotnet test tests/CashFlow.Modules.Transactions.UnitTests` e `TransactionsModuleTests` (integração) | 2/2 unitários e 2/2 integração passaram (2026-10-26) | Sem `ConnectionStrings:Transactions` o registro falha (não cai numa string compartilhada); DbContext/UoW são a mesma instância por escopo; a API conecta como `transactions_app`; histórico de migrations em `transactions.__ef_migrations_history` |
+| Compose sobe | `docker compose up --build -d` | migrator `Exited (0)`, api healthy, worker/postgres/rabbitmq up; `/health` e `/openapi/v1.json` 200 (2026-10-26); repetido com o módulo Transactions: migrator `Exited (0)` executando `MigrateAsync` do módulo (ainda sem migrations), api healthy, worker estável | Portas do host configuráveis no `.env` |
 | Unitários | Pendente | Não executado | — |
 | Integração | Pendente (fluxos de lançamento, Outbox, Inbox) | Não executado | — |
 | Queda Worker | Pendente | Não executado | — |

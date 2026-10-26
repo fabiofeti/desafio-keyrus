@@ -12,8 +12,16 @@
     <Project Path="src/Worker/CashFlow.Worker/CashFlow.Worker.csproj" />
   </Folder>
   <Folder Name="/src/modules/" />
+  <Folder Name="/src/modules/transactions/">
+    <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.Domain/CashFlow.Modules.Transactions.Domain.csproj" />
+    <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.Application/CashFlow.Modules.Transactions.Application.csproj" />
+    <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.Infrastructure/CashFlow.Modules.Transactions.Infrastructure.csproj" />
+    <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.Presentation/CashFlow.Modules.Transactions.Presentation.csproj" />
+    <Project Path="src/Modules/Transactions/CashFlow.Modules.Transactions.IntegrationEvents/CashFlow.Modules.Transactions.IntegrationEvents.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj" />
     <Project Path="tests/CashFlow.IntegrationTests/CashFlow.IntegrationTests.csproj" />
+    <Project Path="tests/CashFlow.Modules.Transactions.UnitTests/CashFlow.Modules.Transactions.UnitTests.csproj" />
   </Folder>
 </Solution>

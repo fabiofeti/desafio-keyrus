@@ -1,3 +1,6 @@
+using CashFlow.Modules.Consolidation.Domain.DailyBalances;
+using Microsoft.EntityFrameworkCore;
+
 namespace CashFlow.Modules.Consolidation.Application.Abstractions.Data;
 
 /// <summary>
@@ -7,7 +10,9 @@ namespace CashFlow.Modules.Consolidation.Application.Abstractions.Data;
 /// built from events, never by reading the transactions.
 /// </summary>
 /// <remarks>
-/// Also the type <c>Hosting.Modules.ApplicationAssemblies</c> names to find
-/// this assembly. DbSets are added with each aggregate.
+/// Read side only. Balances are written by <see cref="Projections.IDailyBalanceProjection"/>.
 /// </remarks>
-public interface IConsolidationDbContext;
+public interface IConsolidationDbContext
+{
+    DbSet<DailyBalance> DailyBalances { get; }
+}

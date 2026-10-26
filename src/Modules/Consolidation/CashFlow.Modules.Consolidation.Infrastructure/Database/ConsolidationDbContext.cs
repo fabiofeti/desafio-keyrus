@@ -1,4 +1,6 @@
 using CashFlow.Modules.Consolidation.Application.Abstractions.Data;
+using CashFlow.Modules.Consolidation.Domain.DailyBalances;
+using CashFlow.Modules.Consolidation.Infrastructure.Inbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace CashFlow.Modules.Consolidation.Infrastructure.Database;
@@ -6,6 +8,10 @@ namespace CashFlow.Modules.Consolidation.Infrastructure.Database;
 public sealed class ConsolidationDbContext(DbContextOptions<ConsolidationDbContext> options)
     : DbContext(options), IConsolidationDbContext, IConsolidationUnitOfWork
 {
+    public DbSet<DailyBalance> DailyBalances => Set<DailyBalance>();
+
+    internal DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Everything this context can see lives in one schema, and the schema

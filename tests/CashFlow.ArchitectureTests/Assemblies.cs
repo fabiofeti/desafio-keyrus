@@ -37,7 +37,7 @@ public static class Assemblies
             typeof(CashFlow.Modules.Transactions.IntegrationEvents.TransactionCreatedIntegrationEvent).Assembly),
         new(
             "Consolidation",
-            typeof(CashFlow.Modules.Consolidation.Domain.ConsolidationDomain).Assembly,
+            typeof(CashFlow.Modules.Consolidation.Domain.DailyBalances.DailyBalance).Assembly,
             typeof(CashFlow.Modules.Consolidation.Application.Abstractions.Data.IConsolidationDbContext).Assembly,
             typeof(CashFlow.Modules.Consolidation.Infrastructure.ConsolidationModule).Assembly,
             typeof(CashFlow.Modules.Consolidation.Presentation.ConsolidationPresentation).Assembly,

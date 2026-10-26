@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Domain\CashFlow.Modules.Consolidation.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Application\CashFlow.Modules.Consolidation.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Infrastructure\CashFlow.Modules.Consolidation.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Consolidation\CashFlow.Modules.Consolidation.Presentation\CashFlow.Modules.Consolidation.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

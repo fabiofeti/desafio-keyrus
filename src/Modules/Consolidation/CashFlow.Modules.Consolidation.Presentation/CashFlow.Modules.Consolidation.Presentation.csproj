@@ -5,4 +5,15 @@
     <ProjectReference Include="..\..\..\Common\CashFlow.Common.Presentation\CashFlow.Common.Presentation.csproj" />
   </ItemGroup>
 
+  <ItemGroup Label="Cross-module">
+    <!-- The one reference the boundary allows: Transactions' public, versioned
+         event contract. Consolidation hears that a transaction was recorded; it
+         never learns where Transactions keeps its tables. -->
+    <ProjectReference Include="..\..\Transactions\CashFlow.Modules.Transactions.IntegrationEvents\CashFlow.Modules.Transactions.IntegrationEvents.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CashFlow.Modules.Consolidation.UnitTests" />
+  </ItemGroup>
+
 </Project>

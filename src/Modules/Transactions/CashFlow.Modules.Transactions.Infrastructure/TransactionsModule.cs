@@ -1,6 +1,7 @@
 using CashFlow.Modules.Transactions.Application.Abstractions.Data;
 using CashFlow.Modules.Transactions.Application.Abstractions.Time;
 using CashFlow.Modules.Transactions.Infrastructure.Database;
+using CashFlow.Modules.Transactions.Infrastructure.Outbox;
 using CashFlow.Modules.Transactions.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -40,7 +41,10 @@ public static class TransactionsModule
     {
         services.AddTransactionsModule(configuration);
 
-        // The outbox publisher is registered here by add-integration-event.
+        // Needs the confirmed publisher from AddMessaging, which only the Worker registers.
+        services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
+        services.AddSingleton<OutboxProcessor>();
+        services.AddHostedService<OutboxPublisher>();
 
         return services;
     }

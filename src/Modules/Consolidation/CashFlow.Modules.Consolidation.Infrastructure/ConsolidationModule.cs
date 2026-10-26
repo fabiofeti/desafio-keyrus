@@ -1,5 +1,9 @@
+using CashFlow.Common.Infrastructure.Messaging;
 using CashFlow.Modules.Consolidation.Application.Abstractions.Data;
+using CashFlow.Modules.Consolidation.Application.Abstractions.Projections;
+using CashFlow.Modules.Consolidation.Infrastructure.DailyBalances;
 using CashFlow.Modules.Consolidation.Infrastructure.Database;
+using CashFlow.Modules.Transactions.IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +19,9 @@ public static class ConsolidationModule
 {
     public const string ConnectionStringName = "Consolidation";
 
+    /// <summary>This module's durable queue for the v1 event; versioned like the contract.</summary>
+    public const string TransactionCreatedQueue = "consolidation.transaction-created.v1";
+
     /// <summary>API: DbContext and ports, for the daily balance reads. Nothing that talks to the broker.</summary>
     public static IServiceCollection AddConsolidationModule(this IServiceCollection services, IConfiguration configuration)
     {
@@ -26,6 +33,7 @@ public static class ConsolidationModule
         services.AddDbContext<ConsolidationDbContext>(options => ConfigureDbContext(options, connectionString));
         services.AddScoped<IConsolidationDbContext>(sp => sp.GetRequiredService<ConsolidationDbContext>());
         services.AddScoped<IConsolidationUnitOfWork>(sp => sp.GetRequiredService<ConsolidationDbContext>());
+        services.AddScoped<IDailyBalanceProjection, DailyBalanceProjection>();
 
         return services;
     }
@@ -35,8 +43,11 @@ public static class ConsolidationModule
     {
         services.AddConsolidationModule(configuration);
 
-        // The TransactionCreated consumer and its inbox are wired here by
-        // add-integration-event.
+        services.AddIntegrationEventConsumer(new SubscriptionOptions<TransactionCreatedIntegrationEvent>(
+            TransactionCreatedIntegrationEvent.Exchange,
+            TransactionCreatedIntegrationEvent.RoutingKey,
+            TransactionCreatedQueue,
+            TransactionCreatedIntegrationEvent.MessageType));
 
         return services;
     }

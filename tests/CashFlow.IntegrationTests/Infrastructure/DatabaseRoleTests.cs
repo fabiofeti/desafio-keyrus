@@ -93,6 +93,33 @@ public class DatabaseRoleTests(IntegrationTestWebAppFactory factory) : BaseInteg
         exception.SqlState.ShouldBe(InsufficientPrivilege);
     }
 
+    [Theory]
+    [InlineData("consolidation", "SELECT count(*) FROM transactions.transactions")]
+    [InlineData("consolidation", "SELECT count(*) FROM transactions.outbox_messages")]
+    [InlineData("transactions", "SELECT count(*) FROM consolidation.daily_balances")]
+    [InlineData("transactions", "SELECT count(*) FROM consolidation.inbox_messages")]
+    public async Task Role_Should_NotRead_TheOtherModulesRealTables(string ownSchema, string sql)
+    {
+        // Act: the tables the migrations created, not probes.
+        PostgresException exception = await Should.ThrowAsync<PostgresException>(
+            () => ScalarAsync(OwnConnection(ownSchema), sql));
+
+        // Assert
+        exception.SqlState.ShouldBe(InsufficientPrivilege);
+    }
+
+    [Fact]
+    public async Task ConsolidationRole_Should_NotWrite_TheTransactionsOutbox()
+    {
+        // Act
+        PostgresException exception = await Should.ThrowAsync<PostgresException>(
+            () => ExecuteAsync(Factory.ConsolidationConnectionString,
+                "UPDATE transactions.outbox_messages SET published_on_utc = now()"));
+
+        // Assert
+        exception.SqlState.ShouldBe(InsufficientPrivilege);
+    }
+
     private string OwnConnection(string schema) => schema == "transactions"
         ? Factory.TransactionsConnectionString
         : Factory.ConsolidationConnectionString;

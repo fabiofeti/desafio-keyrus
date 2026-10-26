@@ -32,9 +32,9 @@ Retorno `201`, `Location: /transactions/{id}` e corpo `id`, `type`, `amount`, `o
 
 `GET /daily-balances/2026-10-26` retorna:
 ```json
-{"date":"2026-10-26","credits":125.50,"debits":20.00,"balance":105.50,"lastUpdatedAt":"2026-10-26T13:01:00Z"}
+{"date":"2026-10-26","credits":125.50,"debits":20.00,"balance":105.50,"lastUpdatedAt":"2026-10-26T13:01:00Z","consistency":"eventual"}
 ```
-Se não houver lançamentos, definir comportamento estável (zero ou 404) e testar. Não prometer leitura sincronizada com POST.
+Lê só `consolidation.daily_balances` (nunca soma `transactions.transactions`); `balance = credits - debits`, calculado na leitura. Data sem lançamento consolidado: `200` com zeros e `lastUpdatedAt: null` (zero, e não 404: o cliente não precisa distinguir "sem movimento" de "ainda não processado"). Data fora de `YYYY-MM-DD` ou inexistente (`2026-13-01`): `400`. A leitura não é sincronizada com o POST: `consistency: "eventual"` e `lastUpdatedAt` dizem até onde o saldo foi consolidado.
 
 ## Evento
 `TransactionCreated.v1` (`type` da mensagem `transactions.transaction-created.v1`): `id` (eventId, chave de deduplicação), `occurredOnUtc`, `transactionId`, `type`, `amount`, `businessDate`, `occurredAt`, `version`, `correlationId`. Publicação persistente com confirmação. Evitar dados pessoais desnecessários.

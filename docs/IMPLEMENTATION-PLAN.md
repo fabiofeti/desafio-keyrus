@@ -8,6 +8,7 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Módulos `Transactions` e `Consolidation` via `add-module`: cinco projetos cada em `src/Modules/{Module}`, `{Module}DbContext` (schema, connection string e role próprias, histórico de migrations no próprio schema), registro na API (`Add{Module}Module`), no Worker (`Add{Module}Worker`), no migrator e nos testes de arquitetura; projetos `CashFlow.Modules.{Module}.UnitTests`.
 - Lançamentos (`add-entity` + `add-feature`): agregado `Transaction` imutável, `OutboxMessage` no `TransactionsDbContext`, migration `Add_Transactions_And_Outbox`; `POST /transactions` (Idempotency-Key, replay, 409, corrida resolvida pelo índice único) grava lançamento e `TransactionCreated.v1` na Outbox no mesmo `SaveChangesAsync`; `GET /transactions?date=` paginado. Falhas de binding (data/JSON inválidos) passaram a responder 400 em vez de 500.
 - Integração entre módulos (`add-integration-event`): `OutboxProcessor`/`OutboxPublisher` no Worker (`FOR UPDATE SKIP LOCKED`, marca só após confirm, para no primeiro erro); `DailyBalance` + `InboxMessage` e migration `Add_Daily_Balances_And_Inbox`; consumer `consolidation.transaction-created.v1` → `ApplyTransactionToDailyBalanceCommand` → uma instrução SQL atômica (Inbox + incremento). Consolidation referencia só `Transactions.IntegrationEvents`.
+- README final: o que foi entregue, arquitetura, portas/URLs, `curl` com saídas reais, testes, falha, carga e limitações conhecidas.
 - Carga (`add-challenge`): `tests/load/daily-balances.js` (k6, 50/s por 2 min, critério de perda fixado no script) executado com o Worker ligado e parado; resultados e limites da medição na evidência.
 - Teste de falha (`add-challenge`): `tests/chaos/worker-down.sh` para o Worker, envia N lançamentos, religa, confere soma exata, Outbox vazia, Inbox = eventos e redelivery ignorada (management API + log do Worker).
 - Cobertura revisada (`add-challenge`): mapa de testes por regra na evidência; novos testes de atomicidade lançamento + Outbox (trigger que recusa a Outbox; validado por mutação) e de escrita cruzada nas tabelas reais.
@@ -23,8 +24,10 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Com `DeliveryLimit` 5, uma mensagem envenenada leva ~40 s de backoff até a DLQ e segura a fila nesse intervalo; replay da DLQ é manual.
 - Se o publisher rodar antes de o consumer declarar a fila, o broker devolve `NO_ROUTE`; a linha fica na Outbox e sai no ciclo seguinte (`attempt_count` sobe).
 
-**Próximos passos, em ordem:**
-1. README final com portas, URLs, curl, comandos e resultados observados.
+**P0 completo.** **Próximos passos (P1, só com liberação do usuário):**
+1. Cenário de queda do broker no Compose (parar RabbitMQ, POSTs seguem 201, Outbox acumula e drena) — complementa o item de Polly.
+2. Health/readiness, logs estruturados com correlation ID e métricas básicas.
+3. Contratos de API documentados e diagrama atualizado a partir do código.
 
 Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registrada antes de marcar `[x]`.
 
@@ -40,7 +43,7 @@ Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registra
 - [x] Unitários e integração para regras, isolamento e idempotência. *(Revisão da cobertura + duas lacunas fechadas: atomicidade lançamento/Outbox sob falha e escrita cruzada nas tabelas reais — [testes](software/03-testing.md#evidência).)*
 - [x] Teste de falha: parar worker, criar lançamentos, reiniciar, verificar convergência sem duplicação. *(Evidência: `tests/chaos/worker-down.sh`, PASS em duas execuções — [testes](software/03-testing.md#evidência).)*
 - [x] Executar carga de 50 RPS na leitura de consolidados; medir perda, latência, erros e janela de teste. *(Evidência: k6 2 min a 50/s, Worker ligado e parado, perda 0,00%, p99 < 3 ms localmente — [testes](software/03-testing.md#evidência).)*
-- [ ] Atualizar README com portas, URLs, curl, comandos e resultados observados.
+- [x] Atualizar README com portas, URLs, curl, comandos e resultados observados. *(Exemplos de `curl` executados no Compose em 2026-10-26 e saídas reais no [README](../README.md); limitações explícitas.)*
 
 ## P1 — se houver tempo
 - [ ] Retry exponencial + jitter e circuit breaker com Polly na publicação e conexões transitórias; evitar circuit breaker no caminho crítico de gravação de Transactions por indisponibilidade de Consolidation.

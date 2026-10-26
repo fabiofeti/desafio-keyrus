@@ -42,6 +42,56 @@ public class TransactionsTests(IntegrationTestWebAppFactory factory) : BaseInteg
     }
 
     [Fact]
+    public async Task Create_Should_PersistNothing_WhenTheOutboxWriteFails()
+    {
+        // Arrange: a trigger that refuses the outbox row of this test's amount
+        // only. The integration tests run serially, and the trigger is dropped
+        // before the test ends, so no other test sees it.
+        DateOnly date = UniqueDate();
+        const decimal amount = 777.77m;
+        string key = NewKey();
+        var body = Body(amount: amount, occurredAt: $"{date:yyyy-MM-dd}T12:00:00-03:00");
+        await AdminExecuteAsync(
+            $"""
+            CREATE FUNCTION transactions.it_refuse_outbox() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN
+                IF (NEW.payload->>'amount')::numeric = {amount.ToString(System.Globalization.CultureInfo.InvariantCulture)} THEN
+                    RAISE EXCEPTION 'outbox write refused by test';
+                END IF;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER it_refuse_outbox BEFORE INSERT ON transactions.outbox_messages
+                FOR EACH ROW EXECUTE FUNCTION transactions.it_refuse_outbox();
+            """);
+
+        HttpResponseMessage failed;
+        try
+        {
+            // Act
+            failed = await PostAsync(body, key);
+        }
+        finally
+        {
+            await AdminExecuteAsync(
+                """
+                DROP TRIGGER it_refuse_outbox ON transactions.outbox_messages;
+                DROP FUNCTION transactions.it_refuse_outbox();
+                """);
+        }
+
+        // Assert: the transaction row went down with the outbox row - nothing listed,
+        // and the same key afterwards creates (not replays) the transaction.
+        failed.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        PageDto page = await ReadAsync<PageDto>(await HttpClient.GetAsync($"transactions?date={date:yyyy-MM-dd}"));
+        page.TotalCount.ShouldBe(0);
+
+        HttpResponseMessage retried = await PostAsync(body, key);
+        retried.StatusCode.ShouldBe(HttpStatusCode.Created);
+        retried.Headers.Contains("Idempotency-Replayed").ShouldBeFalse();
+        (await OutboxRowsForAsync((await ReadAsync<TransactionDto>(retried)).Id)).Count.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Create_Should_ReturnSameBody_WhenRepeatedWithSameKey()
     {
         // Arrange
@@ -211,6 +261,14 @@ public class TransactionsTests(IntegrationTestWebAppFactory factory) : BaseInteg
 
     private static async Task<string?> ProblemCodeAsync(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<JsonElement>(Json)).GetProperty("code").GetString();
+
+    private async Task AdminExecuteAsync(string sql)
+    {
+        await using var connection = new NpgsqlConnection(Factory.AdminConnectionString);
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync();
+    }
 
     private async Task<(long Count, long Unpublished)> OutboxRowsForAsync(Guid transactionId)
     {

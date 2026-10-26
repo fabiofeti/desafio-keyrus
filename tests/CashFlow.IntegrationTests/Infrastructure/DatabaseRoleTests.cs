@@ -108,6 +108,22 @@ public class DatabaseRoleTests(IntegrationTestWebAppFactory factory) : BaseInteg
         exception.SqlState.ShouldBe(InsufficientPrivilege);
     }
 
+    [Theory]
+    [InlineData("transactions", "INSERT INTO consolidation.daily_balances (business_date, credits, debits, updated_at_utc) VALUES ('2099-01-01', 1, 0, now())")]
+    [InlineData("transactions", "UPDATE consolidation.daily_balances SET credits = credits + 1")]
+    [InlineData("transactions", "INSERT INTO consolidation.inbox_messages (event_id, message_type, processed_at_utc) VALUES (gen_random_uuid(), 'x', now())")]
+    [InlineData("consolidation", "INSERT INTO transactions.transactions (id, type, amount, occurred_at, business_date, idempotency_key, request_fingerprint, created_at_utc) VALUES (gen_random_uuid(), 'Credit', 1, now(), '2099-01-01', 'role-test', 'x', now())")]
+    [InlineData("consolidation", "INSERT INTO transactions.outbox_messages (id, type, payload, correlation_id, occurred_on_utc, attempt_count) VALUES (gen_random_uuid(), 'x', '{}', 'x', now(), 0)")]
+    public async Task Role_Should_NotWrite_TheOtherModulesRealTables(string ownSchema, string sql)
+    {
+        // Act: rule 1 on the tables the migrations created, not probes.
+        PostgresException exception = await Should.ThrowAsync<PostgresException>(
+            () => ExecuteAsync(OwnConnection(ownSchema), sql));
+
+        // Assert
+        exception.SqlState.ShouldBe(InsufficientPrivilege);
+    }
+
     [Fact]
     public async Task ConsolidationRole_Should_NotWrite_TheTransactionsOutbox()
     {

@@ -28,8 +28,12 @@ Testar `GET /daily-balances/{date}` por janela representativa (por exemplo 2 min
 Preencher após rodar:
 | Cenário | Comando/script | Resultado | Evidência |
 |---|---|---|---|
+| Arquitetura (camadas, registro de módulos, hosts) | `dotnet test tests/CashFlow.ArchitectureTests` | 15/15 passaram (2026-10-26) | Inclui: API sem dependência do broker; Worker sem mapear endpoint; Common sem referência a módulo |
+| Isolamento por role (sem módulos ainda) | `dotnet test tests/CashFlow.IntegrationTests` — `DatabaseRoleTests` | 10/10 passaram (2026-10-26) | Com o script real de init: cada role lê/grava o próprio schema; `42501` ao ler/gravar o outro, ao `DELETE` e ao `CREATE TABLE` |
+| Publisher com confirms (base) | `RabbitMqPublisherTests` | 2/2 passaram (2026-10-26) | Mensagem persistente com id/tipo/correlation; publish sem fila ligada lança `PublishException` |
+| Compose sobe | `docker compose up --build -d` | migrator `Exited (0)`, api healthy, worker/postgres/rabbitmq up; `/health` e `/openapi/v1.json` 200 (2026-10-26) | Portas do host configuráveis no `.env` |
 | Unitários | Pendente | Não executado | — |
-| Integração | Pendente | Não executado | — |
+| Integração | Pendente (fluxos de lançamento, Outbox, Inbox) | Não executado | — |
 | Queda Worker | Pendente | Não executado | — |
 | Queda broker | Pendente | Não executado | — |
 | Carga 50 RPS | Pendente | Não executado | — |

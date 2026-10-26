@@ -71,7 +71,9 @@ Não copie: autenticação/JWT, Keycloak, OpenTelemetry, rate limiting, HybridCa
    `Host.CreateApplicationBuilder`, `AddApplication(Modules.ApplicationAssemblies)`,
    `AddIntegrationEventHandlers(Modules.PresentationAssemblies)`, e o `Add{Módulo}Worker`
    de cada módulo. Template em [references/hosts.md](references/hosts.md#worker).
-   **Não** referencia `Microsoft.AspNetCore.App` nem mapeia endpoints.
+   **Não** mapeia endpoints (verificado em `HostTests.Worker_Should_NotMapEndpoints`). Ele recebe
+   o shared framework do ASP.NET Core de forma transitiva, porque os `IIntegrationEventHandler`
+   ficam na Presentation dos módulos; por isso a imagem final do Worker é `aspnet`, não `runtime`.
 6. **`tests/CashFlow.ArchitectureTests`**: `LayerTests` e `ModuleTests` adaptados, e
    `HostTests` com duas regras: o Worker não referencia nenhum `*.Presentation` para
    mapear endpoint (só para handlers de integração) e nenhum `Common.*` referencia `CashFlow.Modules.*`.

@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/common/">
+    <Project Path="src/Common/CashFlow.Common.Domain/CashFlow.Common.Domain.csproj" />
+    <Project Path="src/Common/CashFlow.Common.Application/CashFlow.Common.Application.csproj" />
+    <Project Path="src/Common/CashFlow.Common.Infrastructure/CashFlow.Common.Infrastructure.csproj" />
+    <Project Path="src/Common/CashFlow.Common.Presentation/CashFlow.Common.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/src/hosts/">
+    <Project Path="src/Hosting/CashFlow.Hosting/CashFlow.Hosting.csproj" />
+    <Project Path="src/Api/CashFlow.Api/CashFlow.Api.csproj" />
+    <Project Path="src/Worker/CashFlow.Worker/CashFlow.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj" />
+    <Project Path="tests/CashFlow.IntegrationTests/CashFlow.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

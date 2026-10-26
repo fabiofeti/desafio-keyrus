@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The module list, shared by both hosts so neither duplicates it. Module
+       projects (Application, Infrastructure, Presentation) are added here by
+       the add-module skill; nothing else in the solution knows the full list. -->
+  <ItemGroup Label="Modules">
+  </ItemGroup>
+
+</Project>

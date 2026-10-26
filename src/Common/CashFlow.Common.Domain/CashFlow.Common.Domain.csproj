@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- References nothing, on purpose: every module's Domain depends on this, so
+       anything added here is added to every Domain. An architecture test
+       asserts it has no package references. -->
+
+</Project>

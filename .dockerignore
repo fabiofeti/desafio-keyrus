@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+.env
+.claude/
+docs/
+tests/
+*.pdf

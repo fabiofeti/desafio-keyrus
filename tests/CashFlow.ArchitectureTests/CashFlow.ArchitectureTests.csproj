@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Api\CashFlow.Api\CashFlow.Api.csproj" />
+    <ProjectReference Include="..\..\src\Worker\CashFlow.Worker\CashFlow.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Hosting\CashFlow.Hosting\CashFlow.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\Common\CashFlow.Common.Domain\CashFlow.Common.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Common\CashFlow.Common.Application\CashFlow.Common.Application.csproj" />
+    <ProjectReference Include="..\..\src\Common\CashFlow.Common.Infrastructure\CashFlow.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Common\CashFlow.Common.Presentation\CashFlow.Common.Presentation.csproj" />
+  </ItemGroup>
+
+  <!-- Module projects under test are added here by the add-module skill. -->
+  <ItemGroup Label="Modules under test">
+  </ItemGroup>
+
+</Project>

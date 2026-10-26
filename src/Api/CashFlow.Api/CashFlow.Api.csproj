@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Design-time only: `dotnet ef` builds each module's model through this
+         startup project, even though the migrations live in the modules. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\CashFlow.Common.Application\CashFlow.Common.Application.csproj" />
+    <ProjectReference Include="..\..\Common\CashFlow.Common.Infrastructure\CashFlow.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Common\CashFlow.Common.Presentation\CashFlow.Common.Presentation.csproj" />
+    <ProjectReference Include="..\..\Hosting\CashFlow.Hosting\CashFlow.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

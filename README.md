@@ -8,13 +8,31 @@ Registrar lançamentos financeiros (créditos/débitos) e consultar saldo diári
 ## Arquitetura proposta
 Monólito modular .NET 10: API e worker compartilhando os módulos de domínio, PostgreSQL com schemas `transactions` e `consolidation`, RabbitMQ e Outbox/Inbox. Consistência eventual; ausência de escrita cruzada.
 
-## Execução local (após implementação)
+## Execução local
+Pré-requisitos: .NET SDK 10 e Docker.
+
 ```bash
+cp .env.example .env        # troque os valores; o .env é ignorado pelo Git
 docker compose up --build -d
-docker compose ps
-docker compose logs -f api worker
+docker compose ps           # migrator: Exited (0); api: healthy; worker, postgres, rabbitmq: up
+curl -i http://localhost:8080/health
 ```
-Documentar no README final URLs/portas efetivas, Swagger/OpenAPI, comandos de testes e exemplos `curl` correspondentes à implementação. **Este pacote contém especificação e roteiro; ainda não contém código nem Compose executável.**
+
+| Serviço | Porta padrão no host | Variável no `.env` para trocar |
+|---|---|---|
+| API (`/health`, OpenAPI em `/openapi/v1.json`) | 8080 | `API_HOST_PORT` |
+| PostgreSQL | 5432 | `POSTGRES_HOST_PORT` |
+| RabbitMQ AMQP / management | 5672 / 15672 | `RABBITMQ_HOST_PORT` / `RABBITMQ_MANAGEMENT_HOST_PORT` |
+
+O serviço `migrator` aplica as migrations com a credencial administrativa e termina; `api` e `worker` usam as roles restritas `transactions_app` e `consolidation_app`, criadas por [deploy/postgres/init/01-roles.sh](deploy/postgres/init/01-roles.sh).
+
+```bash
+dotnet build CashFlow.slnx
+dotnet test CashFlow.slnx                                      # tudo; integração precisa de Docker
+dotnet test CashFlow.slnx --filter "Category!=Integration"     # só arquitetura/unitários
+```
+
+**Status:** solução, camada Common, hosts, testes de arquitetura, isolamento por role e Compose prontos. Módulos Transactions e Consolidation e os endpoints do desafio ainda em implementação (ver [plano](docs/IMPLEMENTATION-PLAN.md)). Exemplos `curl` dos endpoints entram quando eles existirem.
 
 ## Documentação
 - [Plano de implementação](docs/IMPLEMENTATION-PLAN.md)

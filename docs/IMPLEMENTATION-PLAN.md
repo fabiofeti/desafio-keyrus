@@ -2,7 +2,7 @@
 
 ## P0 — indispensável
 - [ ] Criar solução .NET 10 com `CashFlow.Api`, `CashFlow.Worker`, módulos `Transactions`, `Consolidation`, `Shared.Contracts`, testes.
-- [ ] Dockerfiles e Docker Compose: API, Worker, RabbitMQ management, PostgreSQL 17 Alpine; healthchecks e volumes.
+- [x] Dockerfiles e Docker Compose: API, Worker, RabbitMQ management, PostgreSQL 17 Alpine; healthchecks e volumes. *(Evidência: `docker compose up --build -d` com todos os serviços saudáveis — ver [testes](software/03-testing.md#evidência).)*
 - [ ] Configurar schemas, roles com privilégios mínimos, DbContexts e migrations independentes. O runtime de cada módulo usa role restrita; migrations podem usar credenciais administrativas somente no bootstrap.
 - [ ] `POST /transactions` aceita idempotency key e cria crédito/débito em transação com Outbox.
 - [ ] `GET /transactions?date=...` lista lançamentos.

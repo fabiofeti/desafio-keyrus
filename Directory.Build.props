@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Compartilhado por todos os projetos. Só o que seria bug se dois projetos
+       discordassem; não é lugar para centralizar preferência. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>

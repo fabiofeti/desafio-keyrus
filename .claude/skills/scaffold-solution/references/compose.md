@@ -47,7 +47,8 @@ e o inverso com `consolidation_app` em `transactions.transactions`.
 ## Dockerfiles
 
 `src/Api/Dockerfile` (o do Worker é igual, trocando o projeto, a imagem final
-para `mcr.microsoft.com/dotnet/runtime:10.0-alpine` e sem porta HTTP):
+também em `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` — os handlers de integração vivem na
+Presentation dos módulos, que referencia o ASP.NET Core — e sem porta HTTP nem `tzdata`):
 
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -92,7 +93,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
-    ports: ["5432:5432"]
+    ports: ["${POSTGRES_HOST_PORT:-5432}:5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d cashflow"]
       interval: 5s
@@ -106,7 +107,7 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set in .env}
     volumes:
       - rabbitdata:/var/lib/rabbitmq
-    ports: ["5672:5672", "15672:15672"]
+    ports: ["${RABBITMQ_HOST_PORT:-5672}:5672", "${RABBITMQ_MANAGEMENT_HOST_PORT:-15672}:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -131,7 +132,7 @@ services:
       <<: *dotnet-env
       ConnectionStrings__Transactions: Host=postgres;Database=cashflow;Username=transactions_app;Password=${TRANSACTIONS_APP_PASSWORD}
       ConnectionStrings__Consolidation: Host=postgres;Database=cashflow;Username=consolidation_app;Password=${CONSOLIDATION_APP_PASSWORD}
-    ports: ["8080:8080"]
+    ports: ["${API_HOST_PORT:-8080}:8080"]
     depends_on:
       migrator: { condition: service_completed_successfully }
     healthcheck:

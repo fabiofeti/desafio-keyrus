@@ -11,7 +11,7 @@ Registrar lançamentos financeiros (créditos/débitos) e consultar o saldo diá
 | Registrar crédito/débito com idempotência | `POST /transactions` com `Idempotency-Key` (replay, 409, corrida resolvida pelo índice único) | `TransactionsTests`, handler e validator |
 | Listar lançamentos do dia | `GET /transactions?date=` paginado | `TransactionsTests` |
 | Saldo diário consolidado | `GET /daily-balances/{date}`, consistência eventual explícita | `DailyBalancesTests`, smoke no Compose |
-| Registro não depende da consolidação | API não fala com o broker; lançamento + Outbox numa transação local | Teste de falha com o Worker parado; teste de atomicidade |
+| Registro não depende da consolidação | API não fala com o broker; lançamento + Outbox numa transação local | Testes de falha com o Worker e com o RabbitMQ parados; teste de atomicidade |
 | Sem perda nem duplicação na consolidação | Outbox com publisher confirms → RabbitMQ (quorum + DLQ) → Inbox com incremento atômico | `ConsolidationFlowTests`, redelivery no Compose |
 | Isolamento entre módulos | DbContext, schema, migrations e role de banco por módulo; testes de arquitetura | `ModuleTests`, `DatabaseRoleTests` (`42501` na escrita e leitura cruzada) |
 | 50 RPS com ≤ 5% de perda | Executado: perda **0,00%** com o Worker ligado e parado | [Carga](#carga-de-50-rps-no-consolidado) |
@@ -115,6 +115,15 @@ BASE_URL=http://localhost:8080 tests/chaos/worker-down.sh    # opcionais: DATE, 
 
 Resultado observado (2026-10-26, duas execuções): 100/100 POST `201` com o Worker parado (~1,7 s), 100 linhas pendentes na Outbox, saldo inalterado; convergência em ~2 s após religar, soma exata, Outbox 0 pendente, Inbox = eventos; redelivery ignorada (log do Worker: `already applied`), DLQ 0 → 0. Log em [tests/chaos/results/worker-down.log](tests/chaos/results/worker-down.log).
 
+### Teste de falha (RabbitMQ parado)
+[tests/chaos/broker-down.sh](tests/chaos/broker-down.sh) para o RabbitMQ, envia 100 lançamentos, mantém o broker fora por mais `OUTAGE` segundos (padrão 30), religa e confere: POSTs `201`, Outbox retendo os eventos, Worker vivo com o circuit breaker aberto, reconexão do publisher e do consumidor, soma exata, Outbox vazia, Inbox = eventos, fila drenada e DLQ inalterada.
+
+```bash
+BASE_URL=http://localhost:8080 tests/chaos/broker-down.sh    # opcionais: DATE, N, OUTAGE, TIMEOUT, MGMT_URL
+```
+
+Resultado observado (2026-10-26, duas execuções): 100/100 POST `201` com o broker parado (~2 s no total); 100 pendentes na Outbox; o Polly esgotou o timeout de 5 s, registrou a tentativa e abriu o breaker (`Outbox publishing paused: the broker circuit is open`); convergência 11–15 s depois de religar o RabbitMQ (backoff de reconexão + breaker), soma exata, DLQ 0 → 0. Log em [tests/chaos/results/broker-down.log](tests/chaos/results/broker-down.log).
+
 ### Carga de 50 RPS no consolidado
 [tests/load/daily-balances.js](tests/load/daily-balances.js) (k6, `constant-arrival-rate` 50/s por 2 min), executado pela imagem do k6 na rede do Compose. O critério foi fixado no script antes da execução: resposta válida = `200` com o JSON do saldo da data em até 2 s; 5xx, timeout, erro de conexão e iteração descartada contam como perda; limite 5%.
 
@@ -141,10 +150,9 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 ## Limitações conhecidas
 - **PostgreSQL compartilhado:** os módulos são isolados por schema e role, mas estão no mesmo servidor; uma queda do banco derruba registro e consulta (limitação aceita no [ADR-001](docs/adr/ADR-001.md)).
 - **Sem autenticação:** todos os endpoints são públicos por decisão do MVP; JWT/OAuth2 é evolução.
-- **Queda do broker não foi executada como cenário:** o Polly está no Worker (publicação: retry exponencial com jitter, circuit breaker e timeout; conexão: retry com backoff até 30 s) e a Outbox retém o evento — coberto por `ConsolidationFlowTests` com broker inalcançável —, mas o roteiro "parar o RabbitMQ no Compose" ainda está pendente.
 - **Mensagem envenenada** segura a fila por ~40 s de backoff antes de ir à DLQ; replay da DLQ é manual.
 - **Carga medida localmente**, numa só máquina e sobre uma única data; não substitui um teste em ambiente de produção.
-- Itens P1 (health/readiness separado, métricas, contratos documentados a partir do código) e P2 (escala horizontal, HA, dashboards, custos) estão no [plano](docs/IMPLEMENTATION-PLAN.md) e não foram implementados.
+- Itens P1 restantes (health/readiness separado, logs estruturados com correlation ID, métricas, contratos documentados a partir do código) e P2 (escala horizontal, HA, dashboards, custos) estão no [plano](docs/IMPLEMENTATION-PLAN.md) e não foram implementados.
 
 ## Documentação
 - [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md)

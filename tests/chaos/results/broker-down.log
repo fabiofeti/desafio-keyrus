@@ -1,0 +1,37 @@
+[20:53:35] 1. stack up
+[20:53:52]    api healthy at http://localhost:18080
+[20:53:52] 2. baseline for 2026-10-31
+[20:53:53]    credits=1619973 debits=880977 (cents), events so far=100, dlq=0
+[20:53:53] 3. stop the broker
+[20:53:53] 4. post 100 transactions with the broker down
+[20:53:55]    100/100 POST 201 in 1892 ms (slowest 339 ms)
+[20:53:55]    expected delta: credits=+1619973 debits=+880977 (cents)
+[20:53:55] 5. keep the broker down for 30s more
+[20:54:26]    outbox pending for 2026-10-31=100; rows with a recorded failed attempt=1; worker=running
+[20:54:26]    worker log during outage: 'circuit is open' x1, publish failures x1
+[20:54:26] 6. start the broker and wait for convergence (timeout 180s)
+[20:54:41]    converged 15 s after 'start rabbitmq'
+[20:54:46] 7. exact sum, empty outbox, one inbox row per event, consumer back
+[20:54:47]    final credits/debits (cents)=3239946 1761954 want=3239946 1761954
+[20:54:47]    outbox pending=0; events=200; inbox rows=200; max attempt_count=2
+[20:54:47]    queue drained in 0 s, depth=0; dlq 0->0; consumer re-subscribed x1
+[20:54:47] PASS: 100 transactions with the broker down, API unaffected, outbox drained, converged exactly
+=== run 2
+[20:54:47] 1. stack up
+[20:55:03]    api healthy at http://localhost:18080
+[20:55:03] 2. baseline for 2026-10-31
+[20:55:04]    credits=3239946 debits=1761954 (cents), events so far=200, dlq=0
+[20:55:04] 3. stop the broker
+[20:55:05] 4. post 100 transactions with the broker down
+[20:55:07]    100/100 POST 201 in 1999 ms (slowest 342 ms)
+[20:55:07]    expected delta: credits=+1619973 debits=+880977 (cents)
+[20:55:07] 5. keep the broker down for 30s more
+[20:55:38]    outbox pending for 2026-10-31=100; rows with a recorded failed attempt=1; worker=running
+[20:55:38]    worker log during outage: 'circuit is open' x6, publish failures x1
+[20:55:38] 6. start the broker and wait for convergence (timeout 180s)
+[20:55:49]    converged 11 s after 'start rabbitmq'
+[20:55:54] 7. exact sum, empty outbox, one inbox row per event, consumer back
+[20:55:55]    final credits/debits (cents)=4859919 2642931 want=4859919 2642931
+[20:55:55]    outbox pending=0; events=300; inbox rows=300; max attempt_count=2
+[20:55:55]    queue drained in 1 s, depth=0; dlq 0->0; consumer re-subscribed x1
+[20:55:55] PASS: 100 transactions with the broker down, API unaffected, outbox drained, converged exactly

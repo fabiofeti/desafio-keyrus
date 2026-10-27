@@ -1,4 +1,6 @@
+using CashFlow.Common.Infrastructure.Health;
 using CashFlow.Modules.Transactions.Application.Abstractions.Data;
+using CashFlow.Modules.Transactions.Application.Abstractions.Telemetry;
 using CashFlow.Modules.Transactions.Application.Abstractions.Time;
 using CashFlow.Modules.Transactions.Infrastructure.Database;
 using CashFlow.Modules.Transactions.Infrastructure.Outbox;
@@ -29,6 +31,12 @@ public static class TransactionsModule
         services.AddDbContext<TransactionsDbContext>(options => ConfigureDbContext(options, connectionString));
         services.AddScoped<ITransactionsDbContext>(sp => sp.GetRequiredService<TransactionsDbContext>());
         services.AddScoped<ITransactionsUnitOfWork>(sp => sp.GetRequiredService<TransactionsDbContext>());
+
+        services.AddSingleton<TransactionsMetrics>();
+
+        // Opens a connection as this module's role: ready means both modules can
+        // reach their own schema, not just that PostgreSQL answers.
+        services.AddHealthChecks().AddDbContextCheck<TransactionsDbContext>("transactions-database", tags: [HealthTags.Ready]);
 
         services.Configure<BusinessCalendarOptions>(configuration.GetSection(BusinessCalendarOptions.SectionName));
         services.AddSingleton<IBusinessCalendar, BusinessCalendar>();

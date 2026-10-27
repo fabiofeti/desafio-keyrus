@@ -1,12 +1,14 @@
 using CashFlow.Api;
 using CashFlow.Common.Application;
 using CashFlow.Common.Infrastructure;
+using CashFlow.Common.Infrastructure.Health;
 using CashFlow.Common.Presentation.Correlation;
 using CashFlow.Common.Presentation.Endpoints;
 using CashFlow.Common.Presentation.ExceptionHandling;
 using CashFlow.Hosting;
 using CashFlow.Modules.Consolidation.Infrastructure;
 using CashFlow.Modules.Transactions.Infrastructure;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,11 @@ builder.Services.AddEndpoints(Modules.PresentationAssemblies);
 
 builder.Services.AddOpenApi();
 builder.Services.AddExceptionHandler<UnhandledExceptionHandler>();
+// Binding failures (unreadable JSON, a malformed date) throw in every
+// environment, not only in Development, so UnhandledExceptionHandler answers
+// them with the same problem document and log line. Without this, Production
+// returns a bare 400 with an empty body.
+builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 
@@ -40,7 +47,13 @@ app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.MapOpenApi();
-app.MapHealthChecks("/health");
+// Liveness runs no check (the process answers); readiness opens a connection
+// per module with its own role. /health stays as the liveness the compose
+// healthcheck and existing clients already call.
+var live = new HealthCheckOptions { Predicate = _ => false };
+app.MapHealthChecks("/health", live);
+app.MapHealthChecks("/health/live", live);
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains(HealthTags.Ready) });
 
 // Every IEndpoint found in the presentation assemblies of Modules.cs.
 app.MapEndpoints();

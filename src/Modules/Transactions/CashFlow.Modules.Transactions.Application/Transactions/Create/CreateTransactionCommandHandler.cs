@@ -3,6 +3,7 @@ using CashFlow.Common.Application.Messaging;
 using CashFlow.Common.Application.Outbox;
 using CashFlow.Common.Domain;
 using CashFlow.Modules.Transactions.Application.Abstractions.Data;
+using CashFlow.Modules.Transactions.Application.Abstractions.Telemetry;
 using CashFlow.Modules.Transactions.Application.Abstractions.Time;
 using CashFlow.Modules.Transactions.Domain.Transactions;
 using CashFlow.Modules.Transactions.IntegrationEvents;
@@ -15,7 +16,8 @@ internal sealed class CreateTransactionCommandHandler(
     ITransactionsUnitOfWork unitOfWork,
     IBusinessCalendar businessCalendar,
     ICorrelationIdProvider correlationIdProvider,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    TransactionsMetrics metrics)
     : ICommandHandler<CreateTransactionCommand, CreatedTransaction>
 {
     public async Task<Result<CreatedTransaction>> Handle(
@@ -72,6 +74,7 @@ internal sealed class CreateTransactionCommandHandler(
                 ?? throw new InvalidOperationException("Unique violation without a matching idempotency key.");
         }
 
+        metrics.TransactionCreated(command.Type);
         return new CreatedTransaction(transaction.ToResponse(), Replayed: false);
     }
 
@@ -87,8 +90,12 @@ internal sealed class CreateTransactionCommandHandler(
             return null;
         }
 
-        return existing.RequestFingerprint == fingerprint
-            ? new CreatedTransaction(existing.ToResponse(), Replayed: true)
-            : Result.Failure<CreatedTransaction>(TransactionErrors.IdempotencyKeyReused(command.IdempotencyKey));
+        if (existing.RequestFingerprint != fingerprint)
+        {
+            return Result.Failure<CreatedTransaction>(TransactionErrors.IdempotencyKeyReused(command.IdempotencyKey));
+        }
+
+        metrics.RequestReplayed();
+        return new CreatedTransaction(existing.ToResponse(), Replayed: true);
     }
 }

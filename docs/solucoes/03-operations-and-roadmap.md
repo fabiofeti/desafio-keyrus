@@ -1,7 +1,7 @@
 # Soluções — operação, custos, riscos e evolução
 
 ## Operação e observabilidade
-Healthchecks para API, PostgreSQL e RabbitMQ; readiness distinta de liveness. Logs estruturados com `correlationId`, `transactionId`, `eventId`; métricas: RPS, p95/p99, taxa de erro, profundidade da fila, idade da Outbox, lag da consolidação, retries e falhas do consumidor.
+Healthchecks com readiness distinta de liveness: no MVP, `/health/ready` da API testa o PostgreSQL de cada módulo com a própria role, e o RabbitMQ fica fora porque a API não depende dele ([implementado](../software/02-quality-attributes.md#observabilidade-implementado)). Logs estruturados com `correlationId`, `transactionId`, `eventId`; métricas: RPS, p95/p99, taxa de erro, profundidade da fila, idade da Outbox, lag da consolidação, retries e falhas do consumidor.
 
 ## Riscos e mitigação
 | Risco | Mitigação |

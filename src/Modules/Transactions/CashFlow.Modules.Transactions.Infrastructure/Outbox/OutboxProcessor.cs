@@ -1,6 +1,8 @@
 using CashFlow.Common.Application.Abstractions;
 using CashFlow.Common.Application.Outbox;
+using CashFlow.Common.Application.Telemetry;
 using CashFlow.Common.Infrastructure.Messaging;
+using CashFlow.Modules.Transactions.Application.Abstractions.Telemetry;
 using CashFlow.Modules.Transactions.Infrastructure.Database;
 using CashFlow.Modules.Transactions.IntegrationEvents;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +36,7 @@ internal sealed class OutboxProcessor(
     IRabbitMqPublisher publisher,
     IDateTimeProvider dateTimeProvider,
     IOptions<OutboxOptions> options,
+    TransactionsMetrics metrics,
     ILogger<OutboxProcessor> logger)
 {
     public Task DeclareTopologyAsync(CancellationToken cancellationToken) =>
@@ -64,6 +67,10 @@ internal sealed class OutboxProcessor(
 
         foreach (OutboxMessage message in batch)
         {
+            // The request's correlation id, carried by the row, on every line about it.
+            using IDisposable? logScope = logger.BeginScope(
+                LogScopes.Message(message.CorrelationId, message.Id.ToString(), message.Type));
+
             try
             {
                 await publisher.PublishAsync(ToOutgoing(message), cancellationToken);
@@ -73,6 +80,7 @@ internal sealed class OutboxProcessor(
                 // The breaker is protecting a broker that is already failing; this
                 // was not an attempt at this message, so it is not counted as one.
                 logger.LogWarning("Outbox publishing paused: the broker circuit is open");
+                metrics.OutboxCircuitOpen();
                 failed = true;
                 break;
             }
@@ -83,6 +91,7 @@ internal sealed class OutboxProcessor(
                     exception,
                     "Publishing outbox message {MessageId} failed (attempt {Attempt}); it stays unpublished",
                     message.Id, message.AttemptCount);
+                metrics.OutboxPublishFailed();
                 failed = true;
 
                 // Stop at the first failure, so messages keep their order.
@@ -99,6 +108,7 @@ internal sealed class OutboxProcessor(
 
         if (published > 0)
         {
+            metrics.OutboxPublished(published);
             logger.LogInformation("Published {Count} outbox message(s)", published);
         }
 

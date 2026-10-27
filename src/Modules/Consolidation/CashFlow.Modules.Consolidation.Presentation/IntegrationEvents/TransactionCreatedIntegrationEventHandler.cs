@@ -21,7 +21,8 @@ internal sealed class TransactionCreatedIntegrationEventHandler(
                 integrationEvent.Id,
                 integrationEvent.BusinessDate,
                 integrationEvent.Type,
-                integrationEvent.Amount),
+                integrationEvent.Amount,
+                integrationEvent.OccurredOnUtc),
             cancellationToken);
 
         // The failure must reach the broker: throwing means NACK and redelivery,

@@ -14,3 +14,21 @@ Validação de input, limites de tamanho, SQL parametrizado/EF Core, credentials
 
 ## Disponibilidade e confiabilidade
 Fila durável, mensagens persistentes, publisher confirms, Outbox e Inbox; monitorar backlog, idade da Outbox e atrasos de projeção. Métricas propostas: p95/p99, disponibilidade observada, RPS, HTTP 5xx, lag de consolidação, mensagens duplicadas descartadas.
+
+## Observabilidade (implementado)
+- **Health:** `/health/live` não testa nada (o processo responde); `/health/ready` abre uma conexão por módulo com a role do próprio módulo (`transactions-database`, `consolidation-database`) e devolve `503` se uma delas falhar. `/health` continua como liveness, usado pelo healthcheck do Compose. O broker fica fora da readiness da API de propósito: a API não depende dele. O Worker não expõe HTTP; a saúde dele aparece nos logs e nas métricas.
+- **Logs:** no Compose, console em JSON (uma linha por evento, timestamp UTC) com escopos. A API abre o escopo `CorrelationId` em cada request (também no 400/500 do `UnhandledExceptionHandler`); o Worker abre `CorrelationId`, `MessageId` e `MessageType` em cada mensagem publicada pela Outbox e em cada mensagem consumida. Um filtro por `CorrelationId` segue um POST até a consolidação.
+- **Métricas** (`System.Diagnostics.Metrics`, sem exportador; leitura com `dotnet-counters`, prontas para OpenTelemetry):
+
+| Meter | Instrumento | Tipo | Onde |
+|---|---|---|---|
+| `CashFlow.Transactions` | `cashflow.transactions.created` (tag `type`) | contador | API, após o commit |
+| | `cashflow.transactions.replayed` | contador | API, replay por `Idempotency-Key` |
+| | `cashflow.outbox.published` / `publish_failures` / `circuit_open` | contadores | Worker, publisher da Outbox |
+| `CashFlow.Consolidation` | `cashflow.consolidation.events_applied` / `events_duplicate` | contadores | Worker, Inbox |
+| | `cashflow.consolidation.lag` (s) | histograma | Worker: do evento na Outbox ao saldo |
+| `CashFlow.Messaging` | `cashflow.messaging.handler_failures` (tag `queue`) | contador | Worker, consumidor |
+| | `cashflow.messaging.dead_lettered` (tags `queue`, `reason`: `unreadable`, `delivery_limit`) | contador | Worker, consumidor |
+
+Fora do escopo implementado: profundidade da fila e idade da Outbox como métricas (hoje pela management UI e por SQL), exportação para Prometheus/OTLP, dashboards e alertas (P2).
+

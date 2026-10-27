@@ -1,7 +1,10 @@
+using CashFlow.Common.Application.Abstractions;
+using CashFlow.Common.Application.Telemetry;
 using CashFlow.Common.Domain;
 using CashFlow.Common.Presentation.Results;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CashFlow.Common.Presentation.ExceptionHandling;
@@ -33,6 +36,11 @@ public sealed class UnhandledExceptionHandler(ILogger<UnhandledExceptionHandler>
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // This runs outside the correlation middleware (it wraps everything), so
+        // it reopens the request's scope: the error line keeps its CorrelationId.
+        string correlationId = httpContext.RequestServices.GetRequiredService<CorrelationContext>().CorrelationId;
+        using IDisposable? scope = logger.BeginScope(LogScopes.Correlation(correlationId));
+
         // Binding failures - a malformed date in the query, unreadable JSON, a
         // missing required parameter - are the client's error, not ours: a 400
         // in the same problem shape, logged as information, not as an error.

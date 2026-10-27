@@ -2,6 +2,7 @@ using System.Text.Json;
 using CashFlow.Common.Application.Abstractions;
 using CashFlow.Common.Application.Outbox;
 using CashFlow.Common.Domain;
+using CashFlow.Modules.Transactions.Application.Abstractions.Telemetry;
 using CashFlow.Modules.Transactions.Application.Abstractions.Time;
 using CashFlow.Modules.Transactions.Application.Transactions.Create;
 using CashFlow.Modules.Transactions.Domain.Transactions;
@@ -16,6 +17,8 @@ public class CreateTransactionCommandHandlerTests : BaseHandlerTest
 {
     private static readonly DateOnly BusinessDate = new(2026, 10, 26);
     private static readonly DateTime NowUtc = new(2026, 10, 26, 13, 0, 5, DateTimeKind.Utc);
+
+    private readonly TestMeterFactory _meters = new();
 
     [Fact]
     public async Task Handle_Should_PersistTransactionAndOutboxMessage_WhenValid()
@@ -48,6 +51,27 @@ public class CreateTransactionCommandHandlerTests : BaseHandlerTest
         payload.Amount.ShouldBe(125.50m);
         payload.BusinessDate.ShouldBe(BusinessDate);
         payload.Version.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Handle_Should_CountTheCreatedTransaction_ByType_AndTheReplayApart()
+    {
+        // Arrange
+        TransactionsDbContext context = CreateDbContext();
+        CreateTransactionCommandHandler handler = CreateHandler(context);
+
+        // Act
+        var created = await _meters.MeasureAsync("cashflow.transactions.created", async () =>
+        {
+            await handler.Handle(Command(), default);
+            await handler.Handle(Command(), default);
+        });
+        var replayed = await _meters.MeasureAsync("cashflow.transactions.replayed", () => handler.Handle(Command(), default));
+
+        // Assert: the repeated POST is a replay, not a second transaction.
+        created.Count.ShouldBe(1);
+        created.Single().Tags.ShouldContain(new KeyValuePair<string, object?>("type", "Credit"));
+        replayed.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -120,7 +144,7 @@ public class CreateTransactionCommandHandlerTests : BaseHandlerTest
     private static CreateTransactionCommand Command() => new(
         "key-1", "Credit", 125.50m, new DateTimeOffset(2026, 10, 26, 10, 0, 0, TimeSpan.FromHours(-3)), "Venda");
 
-    private static CreateTransactionCommandHandler CreateHandler(TransactionsDbContext context)
+    private CreateTransactionCommandHandler CreateHandler(TransactionsDbContext context)
     {
         IBusinessCalendar calendar = Substitute.For<IBusinessCalendar>();
         calendar.BusinessDateOf(Arg.Any<DateTimeOffset>()).Returns(BusinessDate);
@@ -131,6 +155,6 @@ public class CreateTransactionCommandHandlerTests : BaseHandlerTest
         IDateTimeProvider clock = Substitute.For<IDateTimeProvider>();
         clock.UtcNow.Returns(NowUtc);
 
-        return new CreateTransactionCommandHandler(context, context, calendar, correlation, clock);
+        return new CreateTransactionCommandHandler(context, context, calendar, correlation, clock, new TransactionsMetrics(_meters));
     }
 }

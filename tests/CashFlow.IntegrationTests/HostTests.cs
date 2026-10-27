@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 
 namespace CashFlow.IntegrationTests;
 
@@ -13,6 +14,56 @@ public class HostTests(IntegrationTestWebAppFactory factory) : BaseIntegrationTe
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Theory]
+    [InlineData("health/live")]
+    [InlineData("health/ready")]
+    public async Task HealthProbe_Should_ReturnOk_WhenBothModulesReachTheirSchema(string path)
+    {
+        // Act
+        HttpResponseMessage response = await HttpClient.GetAsync(path);
+
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Ready_Should_Return503_AndLiveStay200_WhenAModulesDatabaseIsUnreachable()
+    {
+        // Arrange: Consolidation's connection points at a port nothing listens on.
+        using HttpClient client = Factory.WithWebHostBuilder(builder => builder.UseSetting(
+                "ConnectionStrings:Consolidation", "Host=127.0.0.1;Port=1;Database=cashflow;Username=x;Password=x;Timeout=2"))
+            .CreateClient();
+
+        // Act
+        HttpResponseMessage ready = await client.GetAsync("health/ready");
+        HttpResponseMessage live = await client.GetAsync("health/live");
+        HttpResponseMessage legacy = await client.GetAsync("health");
+
+        // Assert: unready, not dead - a restart would not bring the database back.
+        ready.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        live.StatusCode.ShouldBe(HttpStatusCode.OK);
+        legacy.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task BindingFailure_Should_ReturnProblemDetails_InProductionToo()
+    {
+        // Arrange: the compose environment. Development alone hid a bare, empty 400.
+        using HttpClient client = Factory.WithWebHostBuilder(builder => builder.UseEnvironment("Production")).CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "transactions")
+        {
+            Content = new StringContent("{nope", System.Text.Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("Idempotency-Key", "it-binding-production");
+
+        // Act
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).ShouldContain("\"code\":\"Request.Invalid\"");
     }
 
     [Fact]

@@ -45,5 +45,5 @@ public class ApplyTransactionToDailyBalanceCommandValidatorTests
     }
 
     private static ApplyTransactionToDailyBalanceCommand Valid() =>
-        new(Guid.NewGuid(), new DateOnly(2026, 10, 26), "Debit", 10.50m);
+        new(Guid.NewGuid(), new DateOnly(2026, 10, 26), "Debit", 10.50m, new DateTime(2026, 10, 26, 13, 0, 0, DateTimeKind.Utc));
 }

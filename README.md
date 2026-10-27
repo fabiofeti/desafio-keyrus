@@ -13,10 +13,11 @@ Registrar lançamentos financeiros (créditos/débitos) e consultar o saldo diá
 | Saldo diário consolidado | `GET /daily-balances/{date}`, consistência eventual explícita | `DailyBalancesTests`, smoke no Compose |
 | Registro não depende da consolidação | API não fala com o broker; lançamento + Outbox numa transação local | Testes de falha com o Worker e com o RabbitMQ parados; teste de atomicidade |
 | Sem perda nem duplicação na consolidação | Outbox com publisher confirms → RabbitMQ (quorum + DLQ) → Inbox com incremento atômico | `ConsolidationFlowTests`, redelivery no Compose |
+| Observabilidade (P1) | `/health/live` e `/health/ready`; logs JSON com `CorrelationId` da API ao Worker; métricas por módulo | `HostTests`, `MetricsTests`, `dotnet-counters` no Compose |
 | Isolamento entre módulos | DbContext, schema, migrations e role de banco por módulo; testes de arquitetura | `ModuleTests`, `DatabaseRoleTests` (`42501` na escrita e leitura cruzada) |
 | 50 RPS com ≤ 5% de perda | Executado: perda **0,00%** com o Worker ligado e parado | [Carga](#carga-de-50-rps-no-consolidado) |
 
-Placar: `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` **126/126** (15 arquitetura, 34 Transactions, 19 Consolidation, 58 integração com PostgreSQL e RabbitMQ reais). Detalhe de cada execução em [docs/software/03-testing.md](docs/software/03-testing.md#evidência).
+Placar: `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` **135/135** (15 arquitetura, 35 Transactions, 21 Consolidation, 64 integração com PostgreSQL e RabbitMQ reais). Detalhe de cada execução em [docs/software/03-testing.md](docs/software/03-testing.md#evidência).
 
 ## Arquitetura
 Monólito modular .NET 10 com dois processos: **API** (Minimal APIs) e **Worker** (publisher da Outbox e consumidor RabbitMQ), que hospedam os mesmos módulos sem duplicar código. Dois bounded contexts, **Transactions** e **Consolidation**, no mesmo PostgreSQL 17, cada um com schema, `DbContext`, migrations e role próprios. Um módulo nunca lê nem grava tabelas do outro: Consolidation conhece apenas o contrato versionado `TransactionCreated.v1`.
@@ -53,7 +54,7 @@ docker compose ps           # migrator: Exited (0); api: healthy; worker, postgr
 
 | Serviço | URL / porta padrão no host | Variável no `.env` para trocar |
 |---|---|---|
-| API | http://localhost:8080 — `/health`, OpenAPI em `/openapi/v1.json` | `API_HOST_PORT` |
+| API | http://localhost:8080 — `/health/live`, `/health/ready` (`/health` = liveness), OpenAPI em `/openapi/v1.json` | `API_HOST_PORT` |
 | RabbitMQ management | http://localhost:15672 (usuário/senha do `.env`) | `RABBITMQ_MANAGEMENT_HOST_PORT` |
 | RabbitMQ AMQP | 5672 | `RABBITMQ_HOST_PORT` |
 | PostgreSQL | 5432, banco `cashflow` | `POSTGRES_HOST_PORT` |
@@ -97,7 +98,30 @@ curl http://localhost:8080/daily-balances/2030-01-01
 # {"date":"2030-01-01","credits":0,"debits":0,"balance":0,"lastUpdatedAt":null,"consistency":"eventual"}
 ```
 
-Toda resposta traz `X-Correlation-Id` (o do cliente, se bem formado, ou um gerado). Ele segue no evento (`correlationId` e propriedade AMQP) e é restaurado no processamento do consumidor; ainda não entra nos logs como campo estruturado (item P1).
+Toda resposta traz `X-Correlation-Id` (o do cliente, se bem formado, ou um gerado). Ele segue no evento (`correlationId` e propriedade AMQP) e aparece como campo `CorrelationId` em cada linha de log da API e do Worker — ver [Observabilidade](#observabilidade).
+
+### Observabilidade
+- **Probes:** `/health/live` só confirma que o processo responde; `/health/ready` abre uma conexão por módulo com a própria role e devolve `503` se o PostgreSQL de um deles não responder. O RabbitMQ não entra: a API não depende dele.
+- **Logs:** no Compose, uma linha JSON por evento, com escopos. Para seguir um request da API até a consolidação:
+
+```bash
+curl -X POST http://localhost:8080/transactions -H 'Content-Type: application/json' \
+  -H 'X-Correlation-Id: demo-123' -H 'Idempotency-Key: demo-123' \
+  -d '{"type":"Credit","amount":10.00,"occurredAt":"2026-11-02T10:00:00-03:00"}'
+docker compose logs api worker --no-log-prefix | grep demo-123 | jq -c '{Category, Message, scope: .Scopes[-1]}'
+# API:    "Executing command CreateTransactionCommand"            scope {"CorrelationId":"demo-123"}
+# Worker: "Executing command ApplyTransactionToDailyBalanceCommand" scope {"CorrelationId":"demo-123","MessageId":"…","MessageType":"transactions.transaction-created.v1"}
+```
+
+- **Métricas:** um `Meter` por módulo (`CashFlow.Transactions`, `CashFlow.Consolidation`, `CashFlow.Messaging`): lançamentos criados e replays, Outbox publicada/falhas/circuito aberto, eventos aplicados/duplicados, **atraso da consolidação** (histograma) e mensagens na DLQ. Sem exportador no MVP; leia com `dotnet-counters` dentro do container (imagem Alpine, binário musl):
+
+```bash
+curl -sL -o dotnet-counters https://aka.ms/dotnet-counters/linux-musl-x64 && chmod +x dotnet-counters
+docker compose cp dotnet-counters worker:/tmp/dotnet-counters
+docker compose exec worker /tmp/dotnet-counters monitor -p 1 --counters CashFlow.Transactions,CashFlow.Consolidation,CashFlow.Messaging
+```
+
+Observado (2026-10-26, 20 POSTs + 1 replay em 40 s): API `created` 15 `Credit` + 5 `Debit`, `replayed` 1; Worker `outbox.published` 20, `events_applied` 20, atraso p50 1,03 s e p95 1,14 s (o intervalo de polling da Outbox é 1 s). Instrumentos e escopo em [02-quality-attributes](docs/software/02-quality-attributes.md#observabilidade-implementado).
 
 ### Build e testes
 ```bash
@@ -152,7 +176,8 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 - **Sem autenticação:** todos os endpoints são públicos por decisão do MVP; JWT/OAuth2 é evolução.
 - **Mensagem envenenada** segura a fila por ~40 s de backoff antes de ir à DLQ; replay da DLQ é manual.
 - **Carga medida localmente**, numa só máquina e sobre uma única data; não substitui um teste em ambiente de produção.
-- Itens P1 restantes (health/readiness separado, logs estruturados com correlation ID, métricas, contratos documentados a partir do código) e P2 (escala horizontal, HA, dashboards, custos) estão no [plano](docs/IMPLEMENTATION-PLAN.md) e não foram implementados.
+- **Métricas sem exportador:** lidas com `dotnet-counters`; Prometheus/OTLP, dashboards e alertas são evolução. Profundidade da fila e idade da Outbox não são métricas (management UI e SQL).
+- Item P1 restante (contratos documentados a partir do código) e P2 (escala horizontal, HA, dashboards, custos) estão no [plano](docs/IMPLEMENTATION-PLAN.md) e não foram implementados.
 
 ## Documentação
 - [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md)

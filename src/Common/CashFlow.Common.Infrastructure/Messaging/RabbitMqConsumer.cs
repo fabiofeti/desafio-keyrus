@@ -2,6 +2,7 @@ using System.Text.Json;
 using CashFlow.Common.Application.Abstractions;
 using CashFlow.Common.Application.EventBus;
 using CashFlow.Common.Application.Outbox;
+using CashFlow.Common.Application.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -39,6 +40,7 @@ internal sealed class RabbitMqConsumer<TEvent>(
     IServiceScopeFactory scopeFactory,
     IOptions<RabbitMqOptions> options,
     SubscriptionOptions<TEvent> subscription,
+    MessagingMetrics metrics,
     ILogger<RabbitMqConsumer<TEvent>> logger) : BackgroundService
     where TEvent : IIntegrationEvent
 {
@@ -124,10 +126,16 @@ internal sealed class RabbitMqConsumer<TEvent>(
     private async Task OnReceivedAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken stoppingToken)
     {
         string messageId = delivery.BasicProperties.MessageId ?? $"tag-{delivery.DeliveryTag}";
+        string correlationId = delivery.BasicProperties.CorrelationId ?? messageId;
+
+        // Every line about this delivery - the handler's included - carries its ids.
+        using IDisposable? logScope = logger.BeginScope(
+            LogScopes.Message(correlationId, messageId, delivery.BasicProperties.Type ?? subscription.MessageType));
 
         TEvent? integrationEvent = TryRead(delivery, messageId);
         if (integrationEvent is null)
         {
+            metrics.DeadLettered(subscription.Queue, "unreadable");
             await channel.BasicRejectAsync(delivery.DeliveryTag, requeue: false, stoppingToken);
             return;
         }
@@ -136,8 +144,7 @@ internal sealed class RabbitMqConsumer<TEvent>(
         {
             await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
 
-            scope.ServiceProvider.GetRequiredService<CorrelationContext>()
-                .Set(delivery.BasicProperties.CorrelationId ?? integrationEvent.Id.ToString("N"));
+            scope.ServiceProvider.GetRequiredService<CorrelationContext>().Set(correlationId);
 
             IIntegrationEventHandler<TEvent> handler =
                 scope.ServiceProvider.GetRequiredService<IIntegrationEventHandler<TEvent>>();
@@ -161,6 +168,13 @@ internal sealed class RabbitMqConsumer<TEvent>(
                 exception,
                 "Handling {MessageType} {MessageId} failed (delivery {Delivery} of {Limit}); returning it in {Delay}",
                 subscription.MessageType, messageId, returns + 1, options.Value.DeliveryLimit + 1, delay);
+
+            metrics.HandlerFailed(subscription.Queue);
+            if (returns >= options.Value.DeliveryLimit)
+            {
+                // This reject crosses x-delivery-limit: the broker dead-letters it.
+                metrics.DeadLettered(subscription.Queue, "delivery_limit");
+            }
 
             try
             {

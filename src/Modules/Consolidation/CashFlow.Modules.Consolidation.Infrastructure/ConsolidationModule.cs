@@ -1,6 +1,8 @@
+using CashFlow.Common.Infrastructure.Health;
 using CashFlow.Common.Infrastructure.Messaging;
 using CashFlow.Modules.Consolidation.Application.Abstractions.Data;
 using CashFlow.Modules.Consolidation.Application.Abstractions.Projections;
+using CashFlow.Modules.Consolidation.Application.Abstractions.Telemetry;
 using CashFlow.Modules.Consolidation.Infrastructure.DailyBalances;
 using CashFlow.Modules.Consolidation.Infrastructure.Database;
 using CashFlow.Modules.Transactions.IntegrationEvents;
@@ -34,6 +36,9 @@ public static class ConsolidationModule
         services.AddScoped<IConsolidationDbContext>(sp => sp.GetRequiredService<ConsolidationDbContext>());
         services.AddScoped<IConsolidationUnitOfWork>(sp => sp.GetRequiredService<ConsolidationDbContext>());
         services.AddScoped<IDailyBalanceProjection, DailyBalanceProjection>();
+
+        services.AddSingleton<ConsolidationMetrics>();
+        services.AddHealthChecks().AddDbContextCheck<ConsolidationDbContext>("consolidation-database", tags: [HealthTags.Ready]);
 
         return services;
     }

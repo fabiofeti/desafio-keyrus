@@ -1,6 +1,7 @@
 using CashFlow.Common.Application.EventBus;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CashFlow.Common.Infrastructure.Messaging;
 
@@ -34,6 +35,7 @@ public static class MessagingConfiguration
         where TEvent : IIntegrationEvent
     {
         services.AddSingleton(subscription);
+        services.TryAddSingleton<MessagingMetrics>();
         services.AddHostedService<RabbitMqConsumer<TEvent>>();
 
         return services;

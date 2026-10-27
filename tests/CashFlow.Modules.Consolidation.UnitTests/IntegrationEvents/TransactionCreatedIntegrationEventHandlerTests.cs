@@ -28,7 +28,7 @@ public class TransactionCreatedIntegrationEventHandlerTests
 
         // Assert
         await _inner.Received(1).Handle(
-            new ApplyTransactionToDailyBalanceCommand(Event.Id, Event.BusinessDate, "Credit", 10m),
+            new ApplyTransactionToDailyBalanceCommand(Event.Id, Event.BusinessDate, "Credit", 10m, Event.OccurredOnUtc),
             Arg.Any<CancellationToken>());
     }
 

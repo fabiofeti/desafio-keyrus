@@ -5,6 +5,13 @@ name: cashflow
 x-dotnet-env: &dotnet-env
   DOTNET_ENVIRONMENT: Production
   ASPNETCORE_ENVIRONMENT: Production
+  # One JSON object per line, with the scopes (CorrelationId, MessageId,
+  # MessageType) as fields: the same query follows a request from the API
+  # through the outbox and the broker into the consolidation.
+  Logging__Console__FormatterName: json
+  Logging__Console__FormatterOptions__IncludeScopes: "true"
+  Logging__Console__FormatterOptions__UseUtcTimestamp: "true"
+  Logging__Console__FormatterOptions__TimestampFormat: "yyyy-MM-ddTHH:mm:ss.fffZ"
 
 services:
   postgres:

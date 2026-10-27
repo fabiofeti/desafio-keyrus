@@ -276,36 +276,129 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 - Itens P2 (HA, autenticação, replay automatizado da DLQ, dashboards, custos) estão só documentados, com proposta por item e o procedimento para extrair um módulo para microsserviço, em [04-evolution-and-module-extraction](docs/solucoes/04-evolution-and-module-extraction.md). A escala horizontal do Worker foi medida: 3 réplicas, soma exata, nenhum evento publicado ou aplicado duas vezes ([scale-workers.sh](tests/chaos/scale-workers.sh)).
 
 ## Documentação de arquitetura
-A prova atende dois perfis. Cada documento responde a uma pergunta; comece pelo perfil que vai avaliar.
+Índice para quem vai avaliar. A prova atende dois perfis; cada lista abaixo é um roteiro de leitura em ordem, com o que cada documento responde e um link para cada item dele.
 
 ### Arquitetura de Soluções
 Visão de negócio, decisões de alto nível, operação e evolução.
 
-| Documento | Responde |
-|---|---|
-| [01 — Negócio e requisitos](docs/solucoes/01-business-and-requirements.md) | Qual problema, quais requisitos funcionais e não funcionais (incluindo 50 RPS e ≤ 5% de perda), o que está fora de escopo |
-| [02 — Arquitetura alvo e trade-offs](docs/solucoes/02-target-architecture.md) | Por que monólito modular, por que cada tecnologia, fluxo ponta a ponta, segurança de integração, disponibilidade e escala |
-| [03 — Operação, riscos e custos](docs/solucoes/03-operations-and-roadmap.md) | Observabilidade, riscos e mitigação, como estimar custos, evoluções futuras |
-| [04 — Evolução (P2) e extração de módulo](docs/solucoes/04-evolution-and-module-extraction.md) | Escalar antes de extrair (3 réplicas do Worker medidas), quando e como tirar um módulo para microsserviço, em fases e com volta; HA, autenticação, replay da DLQ, dashboards |
-| [ADR-001 — Monólito modular, isolamento e mensageria](docs/adr/ADR-001.md) | A decisão registrada, com consequências e alternativas descartadas |
+1. **Este README** — o resumo da entrega, para começar
+   - [Problema](#problema)
+   - [O que foi entregue](#o-que-foi-entregue)
+   - [Arquitetura](#arquitetura)
+   - [Limitações conhecidas](#limitações-conhecidas)
+2. **[Negócio e requisitos](docs/solucoes/01-business-and-requirements.md)** — qual problema, quais requisitos funcionais e não funcionais (incluindo 50 RPS e ≤ 5% de perda), o que fica fora
+   - [Contexto de negócio](docs/solucoes/01-business-and-requirements.md#contexto-de-negócio)
+   - [Capacidades e ownership](docs/solucoes/01-business-and-requirements.md#capacidades-e-ownership)
+   - [Requisitos funcionais refinados (propostas)](docs/solucoes/01-business-and-requirements.md#requisitos-funcionais-refinados-propostas)
+   - [Não funcionais](docs/solucoes/01-business-and-requirements.md#não-funcionais)
+   - [Premissas a validar](docs/solucoes/01-business-and-requirements.md#premissas-a-validar)
+   - [Fora do escopo](docs/solucoes/01-business-and-requirements.md#fora-do-escopo)
+3. **[Arquitetura alvo e trade-offs](docs/solucoes/02-target-architecture.md)** — por que monólito modular, por que cada tecnologia, segurança de integração, disponibilidade e escala
+   - [Decisão](docs/solucoes/02-target-architecture.md#decisão)
+   - [Fluxo](docs/solucoes/02-target-architecture.md#fluxo)
+   - [Justificativa das tecnologias](docs/solucoes/02-target-architecture.md#justificativa-das-tecnologias)
+   - [Segurança de integração](docs/solucoes/02-target-architecture.md#segurança-de-integração)
+   - [Disponibilidade e escala](docs/solucoes/02-target-architecture.md#disponibilidade-e-escala)
+4. **[ADR-001 — Monólito modular, isolamento e mensageria](docs/adr/ADR-001.md)** — a decisão registrada, consequências e alternativas descartadas
+   - [Contexto](docs/adr/ADR-001.md#contexto)
+   - [Decisão](docs/adr/ADR-001.md#decisão)
+   - [Consequências positivas](docs/adr/ADR-001.md#consequências-positivas)
+   - [Consequências negativas](docs/adr/ADR-001.md#consequências-negativas)
+   - [Evolução](docs/adr/ADR-001.md#evolução)
+   - [Alternativas descartadas](docs/adr/ADR-001.md#alternativas-descartadas)
+5. **[Diagramas C4 (visão de soluções)](docs/diagrams/architecture.md)** — contexto e containers, com os serviços reais do Compose
+   - [C4 — Nível 1: Contexto](docs/diagrams/architecture.md#c4--nível-1-contexto)
+   - [C4 — Nível 2: Containers](docs/diagrams/architecture.md#c4--nível-2-containers)
+6. **[Operação, riscos e custos](docs/solucoes/03-operations-and-roadmap.md)** — observabilidade, riscos e mitigação, como estimar custos
+   - [Operação e observabilidade](docs/solucoes/03-operations-and-roadmap.md#operação-e-observabilidade)
+   - [Riscos e mitigação](docs/solucoes/03-operations-and-roadmap.md#riscos-e-mitigação)
+   - [Custos](docs/solucoes/03-operations-and-roadmap.md#custos)
+   - [Arquitetura de transição](docs/solucoes/03-operations-and-roadmap.md#arquitetura-de-transição)
+   - [Evoluções futuras](docs/solucoes/03-operations-and-roadmap.md#evoluções-futuras)
+7. **[Evolução (P2) e extração de módulo para microsserviço](docs/solucoes/04-evolution-and-module-extraction.md)** — escalar antes de extrair (3 réplicas medidas), gatilhos, procedimento em fases com volta, demais itens do P2
+   - [Escalar não é o mesmo que extrair](docs/solucoes/04-evolution-and-module-extraction.md#escalar-não-é-o-mesmo-que-extrair)
+   - [Por que a extração aqui é mecânica](docs/solucoes/04-evolution-and-module-extraction.md#por-que-a-extração-aqui-é-mecânica)
+   - [O que ainda junta os módulos](docs/solucoes/04-evolution-and-module-extraction.md#o-que-ainda-junta-os-módulos)
+   - [Procedimento — exemplo: extrair Consolidation](docs/solucoes/04-evolution-and-module-extraction.md#procedimento--exemplo-extrair-consolidation)
+      - [Fase 1 — novo deployable, mesmos dados (sem migração de dados)](docs/solucoes/04-evolution-and-module-extraction.md#fase-1--novo-deployable-mesmos-dados-sem-migração-de-dados)
+      - [Fase 2 — banco próprio (só se um gatilho de dados pedir)](docs/solucoes/04-evolution-and-module-extraction.md#fase-2--banco-próprio-só-se-um-gatilho-de-dados-pedir)
+      - [Fase 3 — repositório e pacotes (só se o time ou o ciclo de release separar)](docs/solucoes/04-evolution-and-module-extraction.md#fase-3--repositório-e-pacotes-só-se-o-time-ou-o-ciclo-de-release-separar)
+      - [O que muda na operação depois de extrair](docs/solucoes/04-evolution-and-module-extraction.md#o-que-muda-na-operação-depois-de-extrair)
+   - [Demais itens do P2](docs/solucoes/04-evolution-and-module-extraction.md#demais-itens-do-p2)
 
 ### Arquitetura de Software
 Como o sistema é construído, garantido e testado.
 
-| Documento | Responde |
-|---|---|
-| [01 — Design, dados e contratos](docs/software/01-design-and-contracts.md) | Estrutura da solução, contratos HTTP e do evento, tabelas, consistência e concorrência (Outbox, Inbox, DLQ) |
-| [02 — Atributos de qualidade](docs/software/02-quality-attributes.md) | Independência entre módulos, Polly, segurança, performance, disponibilidade, observabilidade implementada |
-| [03 — Testes e evidências](docs/software/03-testing.md) | Estratégia de testes, cenários de falha e carga, e a tabela com cada execução real e seus números |
-| [04 — Rate limiting e semáforo](docs/software/04-rate-limiting-and-concurrency.md) | Por que adiar, limite por IP e por usuário do Entra ID, configuração em cache híbrido, semáforo para chamadas pesadas |
-| [05 — Dados sensíveis e segredos](docs/software/05-sensitive-data-and-secrets.md) | Auditoria de segredos (gitleaks no histórico, configs, logs), inventário do que é sensível, Key Vault, Managed Identity, rotação e checklist de publicação |
+1. **[Design, dados e contratos](docs/software/01-design-and-contracts.md)** — estrutura da solução, contratos HTTP e do evento, tabelas, Outbox, Inbox e DLQ
+   - [Estrutura](docs/software/01-design-and-contracts.md#estrutura)
+   - [Contratos HTTP](docs/software/01-design-and-contracts.md#contratos-http)
+   - [Evento](docs/software/01-design-and-contracts.md#evento)
+   - [Persistência](docs/software/01-design-and-contracts.md#persistência)
+   - [Consistência e concorrência](docs/software/01-design-and-contracts.md#consistência-e-concorrência)
+2. **[Diagramas C4 e sequências (visão de software)](docs/diagrams/architecture.md)** — componentes e classes com os nomes do código; registro, publicação, consolidação e falha
+   - [C4 — Nível 3: Componentes](docs/diagrams/architecture.md#c4--nível-3-componentes)
+   - [C4 — Nível 4: Código (recorte do registro)](docs/diagrams/architecture.md#c4--nível-4-código-recorte-do-registro)
+   - [Sequência — registro e publicação](docs/diagrams/architecture.md#sequência--registro-e-publicação)
+   - [Sequência — consolidação, falha e leitura](docs/diagrams/architecture.md#sequência--consolidação-falha-e-leitura)
+3. **[Atributos de qualidade](docs/software/02-quality-attributes.md)** — independência entre módulos, Polly, segurança, performance, disponibilidade, observabilidade implementada
+   - [Independência operacional](docs/software/02-quality-attributes.md#independência-operacional)
+   - [Polly](docs/software/02-quality-attributes.md#polly)
+   - [Segurança](docs/software/02-quality-attributes.md#segurança)
+   - [Performance](docs/software/02-quality-attributes.md#performance)
+   - [Disponibilidade e confiabilidade](docs/software/02-quality-attributes.md#disponibilidade-e-confiabilidade)
+   - [Observabilidade (implementado)](docs/software/02-quality-attributes.md#observabilidade-implementado)
+4. **[Testes e evidências](docs/software/03-testing.md)** — estratégia, cenários de falha e carga, e a tabela com cada execução real e seus números
+   - [Testes unitários](docs/software/03-testing.md#testes-unitários)
+   - [Testes de integração](docs/software/03-testing.md#testes-de-integração)
+   - [Resiliência / caos local](docs/software/03-testing.md#resiliência--caos-local)
+   - [Carga: 50 RPS](docs/software/03-testing.md#carga-50-rps)
+   - [Evidência](docs/software/03-testing.md#evidência)
+5. **[Dados sensíveis e segredos](docs/software/05-sensitive-data-and-secrets.md)** — auditoria (gitleaks no histórico, configs, logs), inventário, Key Vault, Managed Identity, rotação, checklist
+   - [Resultado da auditoria (2026-10-26)](docs/software/05-sensitive-data-and-secrets.md#resultado-da-auditoria-2026-10-26)
+   - [Inventário do que é sensível](docs/software/05-sensitive-data-and-secrets.md#inventário-do-que-é-sensível)
+   - [Controles já implementados](docs/software/05-sensitive-data-and-secrets.md#controles-já-implementados)
+   - [Limitações conscientes do ambiente local](docs/software/05-sensitive-data-and-secrets.md#limitações-conscientes-do-ambiente-local)
+   - [Boas práticas para produção (Azure)](docs/software/05-sensitive-data-and-secrets.md#boas-práticas-para-produção-azure)
+      - [1. Identidade antes de segredo](docs/software/05-sensitive-data-and-secrets.md#1-identidade-antes-de-segredo)
+      - [2. Key Vault como fonte única dos segredos que restarem](docs/software/05-sensitive-data-and-secrets.md#2-key-vault-como-fonte-única-dos-segredos-que-restarem)
+      - [3. Rotação](docs/software/05-sensitive-data-and-secrets.md#3-rotação)
+      - [4. Transporte e rede](docs/software/05-sensitive-data-and-secrets.md#4-transporte-e-rede)
+      - [5. Higiene de logs e telemetria](docs/software/05-sensitive-data-and-secrets.md#5-higiene-de-logs-e-telemetria)
+      - [6. Repositório e pipeline](docs/software/05-sensitive-data-and-secrets.md#6-repositório-e-pipeline)
+      - [7. Se um segredo vazar](docs/software/05-sensitive-data-and-secrets.md#7-se-um-segredo-vazar)
+   - [Checklist antes de publicar um ambiente](docs/software/05-sensitive-data-and-secrets.md#checklist-antes-de-publicar-um-ambiente)
+6. **[Rate limiting e semáforo (proposta adiada)](docs/software/04-rate-limiting-and-concurrency.md)** — por que adiar, limite por IP e por usuário do Entra ID, cache híbrido, semáforo para chamadas pesadas
+   - [Por que não agora](docs/software/04-rate-limiting-and-concurrency.md#por-que-não-agora)
+   - [Cenário: represar chamadas de consumidores](docs/software/04-rate-limiting-and-concurrency.md#cenário-represar-chamadas-de-consumidores)
+      - [Camadas](docs/software/04-rate-limiting-and-concurrency.md#camadas)
+      - [Chave por usuário no Entra ID](docs/software/04-rate-limiting-and-concurrency.md#chave-por-usuário-no-entra-id)
+      - [Políticas propostas (os números são placeholders até a medição)](docs/software/04-rate-limiting-and-concurrency.md#políticas-propostas-os-números-são-placeholders-até-a-medição)
+      - [Encaixe no código](docs/software/04-rate-limiting-and-concurrency.md#encaixe-no-código)
+      - [Contadores locais e réplicas](docs/software/04-rate-limiting-and-concurrency.md#contadores-locais-e-réplicas)
+   - [Configuração em cache híbrido](docs/software/04-rate-limiting-and-concurrency.md#configuração-em-cache-híbrido)
+   - [Semáforo: limitar as chamadas pesadas](docs/software/04-rate-limiting-and-concurrency.md#semáforo-limitar-as-chamadas-pesadas)
+      - [Desenho](docs/software/04-rate-limiting-and-concurrency.md#desenho)
+   - [Ordem de implementação sugerida](docs/software/04-rate-limiting-and-concurrency.md#ordem-de-implementação-sugerida)
+7. **Contratos gerados a partir do código** — guardados por testes de divergência
+   - [OpenAPI da API](docs/api/openapi.json)
+   - [Exemplo do evento TransactionCreated.v1](docs/api/events/transactions.transaction-created.v1.json)
+8. **Este README — rodar e verificar** — como executar e conferir cada número
+   - [Execução local](#execução-local)
+   - [Usando a API](#usando-a-api)
+   - [Observabilidade](#observabilidade)
+   - [Build e testes](#build-e-testes)
+   - [Teste de falha (Worker parado)](#teste-de-falha-worker-parado)
+   - [Teste de falha (RabbitMQ parado)](#teste-de-falha-rabbitmq-parado)
+   - [Carga de 50 RPS no consolidado](#carga-de-50-rps-no-consolidado)
+   - [Operação da fila](#operação-da-fila)
 
-### Comum aos dois
-| Artefato | Conteúdo |
-|---|---|
-| [Diagramas C4 e de sequência](docs/diagrams/architecture.md) | Contexto, containers, componentes e código, com os nomes reais; sequências de registro, consolidação e falha |
-| [OpenAPI](docs/api/openapi.json) e [evento TransactionCreated.v1](docs/api/events/transactions.transaction-created.v1.json) | Contratos gerados a partir do código e guardados por testes de divergência |
-| [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md) | Itens P0, P1 e P2 com evidência, e o ponto de retomada |
+### Comum aos dois perfis
+1. **[Plano de implementação](docs/IMPLEMENTATION-PLAN.md)** — itens P0, P1 e P2 marcados com evidência, e o ponto de retomada
+   - [Estado atual (atualizado em 2026-10-26)](docs/IMPLEMENTATION-PLAN.md#estado-atual-atualizado-em-2026-10-26)
+   - [P0 — indispensável](docs/IMPLEMENTATION-PLAN.md#p0--indispensável)
+   - [P1 — se houver tempo](docs/IMPLEMENTATION-PLAN.md#p1--se-houver-tempo)
+   - [P2 — apenas documentar](docs/IMPLEMENTATION-PLAN.md#p2--apenas-documentar)
+   - [Instruções de execução](docs/IMPLEMENTATION-PLAN.md#instruções-de-execução)
 
 ## Escopo e transparência
 O que está marcado como entregue foi executado, e cada número citado saiu de uma execução registrada em [docs/software/03-testing.md](docs/software/03-testing.md#evidência). O que não foi executado está dito como tal acima. Não há sistema legado no enunciado; nenhuma arquitetura de transição foi inventada. Credenciais ficam no `.env` local, fora do Git.

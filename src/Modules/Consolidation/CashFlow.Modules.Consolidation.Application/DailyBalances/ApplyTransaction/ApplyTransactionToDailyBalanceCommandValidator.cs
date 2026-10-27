@@ -18,5 +18,7 @@ internal sealed class ApplyTransactionToDailyBalanceCommandValidator
             .Must(t => t is ApplyTransactionToDailyBalanceCommand.Credit or ApplyTransactionToDailyBalanceCommand.Debit)
             .WithMessage("Type must be 'Credit' or 'Debit'.");
         RuleFor(c => c.Amount).GreaterThan(0).PrecisionScale(18, 2, ignoreTrailingZeros: true);
+        // Only feeds the lag metric, but a missing value would record ~2000 years of lag.
+        RuleFor(c => c.EventOccurredOnUtc).NotEmpty();
     }
 }

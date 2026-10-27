@@ -25,7 +25,8 @@ internal sealed class TransactionCreatedIntegrationEventHandler(
                 integrationEvent.OccurredOnUtc),
             cancellationToken);
 
-        // The failure must reach the broker: throwing means NACK and redelivery,
+        // The failure must reach the broker: throwing makes the consumer reject
+        // with requeue (redelivery, then the DLQ past the delivery limit);
         // returning means ACK. Logging and returning would acknowledge a fact
         // that was never applied.
         if (result.IsFailure)

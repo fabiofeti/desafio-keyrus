@@ -18,7 +18,7 @@ Registrar lançamentos financeiros (créditos/débitos) e consultar o saldo diá
 | Isolamento entre módulos | DbContext, schema, migrations e role de banco por módulo; testes de arquitetura | `ModuleTests`, `DatabaseRoleTests` (`42501` na escrita e leitura cruzada) |
 | 50 RPS com ≤ 5% de perda | Executado: perda **0,00%** com o Worker ligado e parado | [Carga](#carga-de-50-rps-no-consolidado) |
 
-Placar: `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` **138/138** (15 arquitetura, 36 Transactions, 22 Consolidation, 65 integração com PostgreSQL e RabbitMQ reais). Detalhe de cada execução em [docs/software/03-testing.md](docs/software/03-testing.md#evidência).
+Placar: `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` **139/139** (15 arquitetura, 36 Transactions, 23 Consolidation, 65 integração com PostgreSQL e RabbitMQ reais). Detalhe de cada execução em [docs/software/03-testing.md](docs/software/03-testing.md#evidência).
 
 ## Arquitetura
 Monólito modular .NET 10 com dois processos: **API** (Minimal APIs) e **Worker** (publisher da Outbox e consumidor RabbitMQ), que hospedam os mesmos módulos sem duplicar código. Dois bounded contexts, **Transactions** e **Consolidation**, no mesmo PostgreSQL 17, cada um com schema, `DbContext`, migrations e role próprios. Um módulo nunca lê nem grava tabelas do outro: Consolidation conhece apenas o contrato versionado `TransactionCreated.v1`.

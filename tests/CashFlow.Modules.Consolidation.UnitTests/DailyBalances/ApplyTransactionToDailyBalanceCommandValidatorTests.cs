@@ -25,6 +25,12 @@ public class ApplyTransactionToDailyBalanceCommandValidatorTests
         _validator.TestValidate(Valid() with { BusinessDate = default }).ShouldHaveValidationErrorFor(c => c.BusinessDate);
     }
 
+    [Fact]
+    public void Validate_Should_Fail_WhenEventOccurredOnUtcIsMissing()
+    {
+        _validator.TestValidate(Valid() with { EventOccurredOnUtc = default }).ShouldHaveValidationErrorFor(c => c.EventOccurredOnUtc);
+    }
+
     [Theory]
     [InlineData("credit")]
     [InlineData("Transfer")]

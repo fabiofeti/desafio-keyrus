@@ -20,7 +20,7 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - DLQ (antecipada do P2 a pedido): fila quorum com `x-delivery-limit` e dead-letter at-least-once para `consolidation.transaction-created.v1.dlq`; consumer usa `basic.reject` com requeue (o `nack` não conta para o limite no RabbitMQ 4).
 - Etapa (1) via `scaffold-solution`: `CashFlow.slnx`, `Common.*`, `CashFlow.Hosting/Modules.cs` (lista de módulos), `CashFlow.Api` (endpoints descobertos por scanning; modo `--migrate`), `CashFlow.Worker` (mensageria RabbitMQ com confirms + Polly), testes de arquitetura (15) e de integração (16), Dockerfiles, Compose e `deploy/postgres/init/01-roles.sh`.
 
-**Placar na última sessão:** `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` 139/139 (15 arquitetura, 36 Transactions, 23 Consolidation, 65 integração). Compose validado de ponta a ponta, inclusive o `GET /daily-balances`, os testes de falha do Worker e do broker e a carga de 50 RPS, e deixado parado (`docker compose stop`, volumes mantidos).
+**Placar na última sessão:** `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` 141/141 (15 arquitetura, 36 Transactions, 23 Consolidation, 67 integração). Compose validado de ponta a ponta, inclusive o `GET /daily-balances`, os testes de falha do Worker e do broker e a carga de 50 RPS, e deixado parado (`docker compose stop`, volumes mantidos).
 
 **Observações em aberto** (registradas, sem ação decidida):
 - Imagem do Worker sem `tzdata`; hoje só o POST (API) usa `IBusinessCalendar`. Vira bug se um handler do Worker passar a usar.
@@ -33,7 +33,8 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 **Próximos passos** (liberados pelo usuário em 2026-10-26, nesta ordem):
 1. [x] MINOR do review: trocar "NACK" por "reject com requeue" no comentário de `TransactionCreatedIntegrationEventHandler.cs` e na evidência do item do Worker neste plano (a linha histórica da tabela de evidência fica).
 2. [x] OBSERVATION do review: `ApplyTransactionToDailyBalanceCommandValidator` passa a exigir `EventOccurredOnUtc` preenchido (hoje um valor default gravaria um atraso de ~2026 anos no histograma `cashflow.consolidation.lag`), com teste de validator. *(Feito em 2026-10-26; 139/139.)*
-3. Depois disso: nada pendente. Outras observações do review (sem ação decidida): Worker sem `tzdata`; portas de PostgreSQL e management expostas no host (só local); OpenAPI servido em qualquer ambiente; senhas literais só de teste em `IntegrationTestWebAppFactory`.
+3. [x] Pedido do usuário (2026-10-26): README para quem clona o repositório (WSL/bash e PowerShell), revisão da injeção de dependência e documento de rate limiting e semáforo. Feito: `.gitattributes` (clone no Windows quebrava o PostgreSQL com `exit 127` por `CRLF`; reproduzido e corrigido), clone novo validado de ponta a ponta em bash; `DependencyInjectionTests` (os dois hosts em Production com `ValidateOnBuild`/`ValidateScopes`, validado por mutação); [04-rate-limiting-and-concurrency](software/04-rate-limiting-and-concurrency.md). Pendente do lado do usuário: os comandos de PowerShell do README não foram executados aqui (a política de permissões bloqueou chamar o `powershell.exe`).
+4. Depois disso: nada pendente. Outras observações do review (sem ação decidida): Worker sem `tzdata`; portas de PostgreSQL e management expostas no host (só local); OpenAPI servido em qualquer ambiente; senhas literais só de teste em `IntegrationTestWebAppFactory`.
 
 Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registrada antes de marcar `[x]`.
 

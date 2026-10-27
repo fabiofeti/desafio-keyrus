@@ -28,7 +28,12 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Com `DeliveryLimit` 5, uma mensagem envenenada leva ~40 s de backoff até a DLQ e segura a fila nesse intervalo; replay da DLQ é manual.
 - Se o publisher rodar antes de o consumer declarar a fila, o broker devolve `NO_ROUTE`; a linha fica na Outbox e sai no ciclo seguinte (`attempt_count` sobe).
 
-**P0 e P1 completos; P2 documentado.** Próximos passos só com pedido do usuário.
+**P0 e P1 completos; P2 documentado.** Revisão final `/ca-review` (2026-10-26) sobre o repositório inteiro: 0 BLOCKER, 0 MAJOR, 1 MINOR, 5 OBSERVATION — veredito "pode seguir".
+
+**Próximos passos** (liberados pelo usuário em 2026-10-26, nesta ordem):
+1. [ ] MINOR do review: trocar "NACK" por "reject com requeue" no comentário de `TransactionCreatedIntegrationEventHandler.cs` e na evidência do item do Worker neste plano (a linha histórica da tabela de evidência fica).
+2. [ ] OBSERVATION do review: `ApplyTransactionToDailyBalanceCommandValidator` passa a exigir `EventOccurredOnUtc` preenchido (hoje um valor default gravaria um atraso de ~2026 anos no histograma `cashflow.consolidation.lag`), com teste de validator.
+3. Depois disso: nada pendente. Outras observações do review (sem ação decidida): Worker sem `tzdata`; portas de PostgreSQL e management expostas no host (só local); OpenAPI servido em qualquer ambiente; senhas literais só de teste em `IntegrationTestWebAppFactory`.
 
 Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registrada antes de marcar `[x]`.
 

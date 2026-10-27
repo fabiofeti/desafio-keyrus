@@ -1,7 +1,7 @@
 ---
 name: scaffold-solution
-description: Etapa (1) do desafio Keyrus - cria a solução .NET 10 (CashFlow.slnx), os quatro projetos Common.*, os hosts CashFlow.Api e CashFlow.Worker, os testes de arquitetura, Dockerfiles, docker-compose com PostgreSQL 17 Alpine e RabbitMQ management, e o script de roles/schemas. Use uma única vez, quando o repositório ainda não tem CashFlow.slnx, ou quando o usuário pedir para criar/montar a solução, o compose ou a infraestrutura local.
-argument-hint: (sem argumentos)
+description: 'Etapa (1) do desafio Keyrus - cria a solução .NET 10 (CashFlow.slnx), os quatro projetos Common.*, os hosts CashFlow.Api e CashFlow.Worker, os testes de arquitetura, Dockerfiles, docker-compose com PostgreSQL 17 Alpine e RabbitMQ management, e o script de roles/schemas. Use uma única vez, quando o repositório ainda não tem CashFlow.slnx, ou quando o usuário pedir para criar/montar a solução, o compose ou a infraestrutura local.'
+argument-hint: '(sem argumentos)'
 ---
 
 # Scaffold da solução

@@ -1,7 +1,7 @@
 ---
 name: add-feature
-description: Cria uma fatia vertical completa num módulo do CashFlow - command ou query, handler, validator FluentValidation, endpoint Minimal API como IEndpoint na Presentation do módulo, e testes unitários, de validator e de integração. Use quando o usuário pedir para adicionar uma feature, caso de uso, command, query ou endpoint (ex.: POST /transactions, GET /transactions, GET /daily-balances/{date}).
-argument-hint: <descrição da feature, ex.: "criar lançamento" ou "consultar saldo diário">
+description: 'Cria uma fatia vertical completa num módulo do CashFlow - command ou query, handler, validator FluentValidation, endpoint Minimal API como IEndpoint na Presentation do módulo, e testes unitários, de validator e de integração. Use quando o usuário pedir para adicionar uma feature, caso de uso, command, query ou endpoint (ex.: POST /transactions, GET /transactions, GET /daily-balances/{date}).'
+argument-hint: '<descrição da feature, ex.: "criar lançamento" ou "consultar saldo diário">'
 ---
 
 # Adicionar uma feature (fatia vertical)

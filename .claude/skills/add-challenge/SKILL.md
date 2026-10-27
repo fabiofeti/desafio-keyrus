@@ -1,7 +1,7 @@
 ---
 name: add-challenge
-description: Leva um item do desafio Keyrus (P0 ou P1 de docs/IMPLEMENTATION-PLAN.md) do pendente ao concluído com evidência - escolhe o próximo item na ordem de prioridade, delega a construção aos skills certos, passa pelos quatro gates (build/arquitetura, testes, evidência executada, documentação) e só então marca o checkbox. Use quando o usuário pedir para implementar o próximo item, um requisito, uma etapa do plano, o teste de falha, o teste de carga de 50 RPS, ou para atualizar evidências.
-argument-hint: <item do plano, ex.: "P0 GET /daily-balances" ou "próximo">
+description: 'Leva um item do desafio Keyrus (P0 ou P1 de docs/IMPLEMENTATION-PLAN.md) do pendente ao concluído com evidência - escolhe o próximo item na ordem de prioridade, delega a construção aos skills certos, passa pelos quatro gates (build/arquitetura, testes, evidência executada, documentação) e só então marca o checkbox. Use quando o usuário pedir para implementar o próximo item, um requisito, uma etapa do plano, o teste de falha, o teste de carga de 50 RPS, ou para atualizar evidências.'
+argument-hint: '<item do plano, ex.: "P0 GET /daily-balances" ou "próximo">'
 ---
 
 # Implementar um item do desafio

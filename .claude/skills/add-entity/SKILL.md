@@ -1,7 +1,7 @@
 ---
 name: add-entity
-description: Adiciona um agregado de domínio a um módulo do CashFlow - entidade com invariantes, catálogo de erros, configuração EF Core, DbContext e migration. Use quando o usuário pedir para criar uma entidade, agregado, modelo de domínio ou tabela (ex.: Transaction, DailyBalance, InboxMessage).
-argument-hint: <descrição da entidade, ex.: "Transaction com tipo, valor, data de negócio e idempotency key">
+description: 'Adiciona um agregado de domínio a um módulo do CashFlow - entidade com invariantes, catálogo de erros, configuração EF Core, DbContext e migration. Use quando o usuário pedir para criar uma entidade, agregado, modelo de domínio ou tabela (ex.: Transaction, DailyBalance, InboxMessage).'
+argument-hint: '<descrição da entidade, ex.: "Transaction com tipo, valor, data de negócio e idempotency key">'
 ---
 
 # Adicionar um agregado

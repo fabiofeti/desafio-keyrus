@@ -1,7 +1,7 @@
 ---
 name: ca-review
-description: Revisa mudanças pendentes do CashFlow contra as regras inegociáveis do CLAUDE.md e as convenções do monólito modular - fronteira entre módulos, roles de banco, Outbox/Inbox, idempotência, Polly, Result, formato das fatias, segredos e testes. Só aponta, não corrige. Use quando o usuário pedir revisão, auditoria de convenções, ou antes de marcar um item do plano como concluído.
-argument-hint: [opcional: arquivos ou feature; padrão = arquivos alterados]
+description: 'Revisa mudanças pendentes do CashFlow contra as regras inegociáveis do CLAUDE.md e as convenções do monólito modular - fronteira entre módulos, roles de banco, Outbox/Inbox, idempotência, Polly, Result, formato das fatias, segredos e testes. Só aponta, não corrige. Use quando o usuário pedir revisão, auditoria de convenções, ou antes de marcar um item do plano como concluído.'
+argument-hint: '[opcional: arquivos ou feature; padrão = arquivos alterados]'
 ---
 
 # Revisão de convenções

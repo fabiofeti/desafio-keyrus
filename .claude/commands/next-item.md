@@ -1,6 +1,6 @@
 ---
-description: Mostra o próximo item pendente do plano (P0 antes de P1) e, com confirmação, implementa via add-challenge.
-argument-hint: [opcional: "go" para implementar sem perguntar]
+description: 'Mostra o próximo item pendente do plano (P0 antes de P1) e, com confirmação, implementa via add-challenge.'
+argument-hint: '[opcional: "go" para implementar sem perguntar]'
 ---
 
 1. Leia `docs/IMPLEMENTATION-PLAN.md` e liste os itens `- [ ]` de P0 e P1, com o primeiro pendente de P0 destacado (P1 só quando P0 estiver completo; P2 nunca).

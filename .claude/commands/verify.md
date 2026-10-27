@@ -1,5 +1,5 @@
 ---
-description: Build, todos os testes (inclusive integração) e validação do compose, com resumo dos resultados reais.
+description: 'Build, todos os testes (inclusive integração) e validação do compose, com resumo dos resultados reais.'
 allowed-tools: Bash(dotnet build:*), Bash(dotnet test:*), Bash(docker compose config:*), Bash(docker info:*)
 ---
 

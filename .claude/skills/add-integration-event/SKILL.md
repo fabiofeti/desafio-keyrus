@@ -1,7 +1,7 @@
 ---
 name: add-integration-event
-description: Cria ou altera a comunicação entre módulos do CashFlow - contrato versionado no projeto IntegrationEvents, escrita na Outbox na mesma transação, publisher em background com publisher confirms e Polly, consumidor RabbitMQ com Inbox e atualização atômica, ACK só após commit. Use quando o usuário pedir evento, mensagem, Outbox, Inbox, publisher, consumer, RabbitMQ, TransactionCreated, ou a consolidação do saldo diário.
-argument-hint: <evento, ex.: "TransactionCreated.v1">
+description: 'Cria ou altera a comunicação entre módulos do CashFlow - contrato versionado no projeto IntegrationEvents, escrita na Outbox na mesma transação, publisher em background com publisher confirms e Polly, consumidor RabbitMQ com Inbox e atualização atômica, ACK só após commit. Use quando o usuário pedir evento, mensagem, Outbox, Inbox, publisher, consumer, RabbitMQ, TransactionCreated, ou a consolidação do saldo diário.'
+argument-hint: '<evento, ex.: "TransactionCreated.v1">'
 ---
 
 # Adicionar uma integration event (Outbox → RabbitMQ → Inbox)

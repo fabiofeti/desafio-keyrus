@@ -1,7 +1,7 @@
 ---
 name: add-module
-description: Cria um bounded context no monólito modular CashFlow - projetos Domain, Application, Infrastructure, Presentation e IntegrationEvents, schema e role PostgreSQL próprios, DbContext com connection string própria, registro na API, no Worker e nos testes de arquitetura. Use quando o usuário pedir para criar o módulo Transactions ou Consolidation, ou outro bounded context.
-argument-hint: <nome do módulo, ex.: "Transactions" ou "Consolidation">
+description: 'Cria um bounded context no monólito modular CashFlow - projetos Domain, Application, Infrastructure, Presentation e IntegrationEvents, schema e role PostgreSQL próprios, DbContext com connection string própria, registro na API, no Worker e nos testes de arquitetura. Use quando o usuário pedir para criar o módulo Transactions ou Consolidation, ou outro bounded context.'
+argument-hint: '<nome do módulo, ex.: "Transactions" ou "Consolidation">'
 ---
 
 # Adicionar um módulo

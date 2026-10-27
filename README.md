@@ -1,6 +1,6 @@
 # Keyrus Cash Flow — Desafio de Arquitetura
 
-Prova técnica única com duas perspectivas: [Arquiteto de Soluções](docs/solucoes/01-business-and-requirements.md) e [Arquiteto de Software](docs/software/01-design-and-contracts.md).
+Prova técnica única com duas perspectivas: [Arquitetura de Soluções](#arquitetura-de-soluções) e [Arquitetura de Software](#arquitetura-de-software) — o índice de cada uma está em [Documentação de arquitetura](#documentação-de-arquitetura).
 
 ## Problema
 Registrar lançamentos financeiros (créditos/débitos) e consultar o saldo diário consolidado. A indisponibilidade do processamento de consolidação não pode interromper o registro. O enunciado fixa pico de **50 requisições/segundo** na consulta do consolidado com **no máximo 5% de perda** — aqui comprovado por teste executado, com os números abaixo.
@@ -268,25 +268,44 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 
 ## Limitações conhecidas
 - **PostgreSQL compartilhado:** os módulos são isolados por schema e role, mas estão no mesmo servidor; uma queda do banco derruba registro e consulta (limitação aceita no [ADR-001](docs/adr/ADR-001.md)).
+- **Segredos no ambiente local:** vêm do `.env` como variáveis de ambiente dos containers e trafegam sem TLS na rede do Compose; aceitável para desenvolvimento, não para produção ([dados sensíveis e segredos](docs/software/05-sensitive-data-and-secrets.md)). Nenhum segredo está no código, nos `appsettings` ou no histórico do Git (gitleaks).
 - **Sem autenticação nem rate limiting:** todos os endpoints são públicos por decisão do MVP; JWT/OAuth2 é evolução, e o rate limiting está adiado de propósito até haver métrica de consumo ([plano por IP, por usuário do Entra ID e com semáforo](docs/software/04-rate-limiting-and-concurrency.md)).
 - **Mensagem envenenada** segura a fila por ~40 s de backoff antes de ir à DLQ; replay da DLQ é manual.
 - **Carga medida localmente**, numa só máquina e sobre uma única data; não substitui um teste em ambiente de produção.
 - **Métricas sem exportador:** lidas com `dotnet-counters`; Prometheus/OTLP, dashboards e alertas são evolução. Profundidade da fila e idade da Outbox não são métricas (management UI e SQL).
 - Itens P2 (HA, autenticação, replay automatizado da DLQ, dashboards, custos) estão só documentados, com proposta por item e o procedimento para extrair um módulo para microsserviço, em [04-evolution-and-module-extraction](docs/solucoes/04-evolution-and-module-extraction.md). A escala horizontal do Worker foi medida: 3 réplicas, soma exata, nenhum evento publicado ou aplicado duas vezes ([scale-workers.sh](tests/chaos/scale-workers.sh)).
 
-## Documentação
-- [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md)
-- [Soluções: negócio e requisitos](docs/solucoes/01-business-and-requirements.md)
-- [Soluções: arquitetura e trade-offs](docs/solucoes/02-target-architecture.md)
-- [Soluções: riscos, custos e evolução](docs/solucoes/03-operations-and-roadmap.md)
-- [Soluções: P2 e extração de módulo para microsserviço](docs/solucoes/04-evolution-and-module-extraction.md)
-- [Software: design, dados e contratos](docs/software/01-design-and-contracts.md)
-- [Software: resiliência, segurança e NFRs](docs/software/02-quality-attributes.md)
-- [Software: testes, critérios de aceite e evidências](docs/software/03-testing.md)
-- [Software: rate limiting e semáforo (proposta adiada)](docs/software/04-rate-limiting-and-concurrency.md)
-- [Contratos: OpenAPI](docs/api/openapi.json) e [evento TransactionCreated.v1](docs/api/events/transactions.transaction-created.v1.json)
-- [C4 e sequências em Mermaid](docs/diagrams/architecture.md)
-- [ADR: arquitetura e isolamento](docs/adr/ADR-001.md)
+## Documentação de arquitetura
+A prova atende dois perfis. Cada documento responde a uma pergunta; comece pelo perfil que vai avaliar.
+
+### Arquitetura de Soluções
+Visão de negócio, decisões de alto nível, operação e evolução.
+
+| Documento | Responde |
+|---|---|
+| [01 — Negócio e requisitos](docs/solucoes/01-business-and-requirements.md) | Qual problema, quais requisitos funcionais e não funcionais (incluindo 50 RPS e ≤ 5% de perda), o que está fora de escopo |
+| [02 — Arquitetura alvo e trade-offs](docs/solucoes/02-target-architecture.md) | Por que monólito modular, por que cada tecnologia, fluxo ponta a ponta, segurança de integração, disponibilidade e escala |
+| [03 — Operação, riscos e custos](docs/solucoes/03-operations-and-roadmap.md) | Observabilidade, riscos e mitigação, como estimar custos, evoluções futuras |
+| [04 — Evolução (P2) e extração de módulo](docs/solucoes/04-evolution-and-module-extraction.md) | Escalar antes de extrair (3 réplicas do Worker medidas), quando e como tirar um módulo para microsserviço, em fases e com volta; HA, autenticação, replay da DLQ, dashboards |
+| [ADR-001 — Monólito modular, isolamento e mensageria](docs/adr/ADR-001.md) | A decisão registrada, com consequências e alternativas descartadas |
+
+### Arquitetura de Software
+Como o sistema é construído, garantido e testado.
+
+| Documento | Responde |
+|---|---|
+| [01 — Design, dados e contratos](docs/software/01-design-and-contracts.md) | Estrutura da solução, contratos HTTP e do evento, tabelas, consistência e concorrência (Outbox, Inbox, DLQ) |
+| [02 — Atributos de qualidade](docs/software/02-quality-attributes.md) | Independência entre módulos, Polly, segurança, performance, disponibilidade, observabilidade implementada |
+| [03 — Testes e evidências](docs/software/03-testing.md) | Estratégia de testes, cenários de falha e carga, e a tabela com cada execução real e seus números |
+| [04 — Rate limiting e semáforo](docs/software/04-rate-limiting-and-concurrency.md) | Por que adiar, limite por IP e por usuário do Entra ID, configuração em cache híbrido, semáforo para chamadas pesadas |
+| [05 — Dados sensíveis e segredos](docs/software/05-sensitive-data-and-secrets.md) | Auditoria de segredos (gitleaks no histórico, configs, logs), inventário do que é sensível, Key Vault, Managed Identity, rotação e checklist de publicação |
+
+### Comum aos dois
+| Artefato | Conteúdo |
+|---|---|
+| [Diagramas C4 e de sequência](docs/diagrams/architecture.md) | Contexto, containers, componentes e código, com os nomes reais; sequências de registro, consolidação e falha |
+| [OpenAPI](docs/api/openapi.json) e [evento TransactionCreated.v1](docs/api/events/transactions.transaction-created.v1.json) | Contratos gerados a partir do código e guardados por testes de divergência |
+| [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md) | Itens P0, P1 e P2 com evidência, e o ponto de retomada |
 
 ## Escopo e transparência
 O que está marcado como entregue foi executado, e cada número citado saiu de uma execução registrada em [docs/software/03-testing.md](docs/software/03-testing.md#evidência). O que não foi executado está dito como tal acima. Não há sistema legado no enunciado; nenhuma arquitetura de transição foi inventada. Credenciais ficam no `.env` local, fora do Git.

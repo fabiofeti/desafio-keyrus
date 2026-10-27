@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CashFlow.Common.Application.Messaging;
 using CashFlow.Common.Domain;
 using CashFlow.Common.Presentation.Endpoints;
@@ -16,9 +17,9 @@ internal sealed class List : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapGet("transactions", async (
-            [FromQuery] DateOnly date,
-            [FromQuery] int? page,
-            [FromQuery] int? pageSize,
+            [FromQuery, Description("Data de negócio, YYYY-MM-DD.")] DateOnly date,
+            [FromQuery, Description("A partir de 1; padrão 1.")] int? page,
+            [FromQuery, Description("Entre 1 e 200; padrão 50.")] int? pageSize,
             IQueryHandler<ListTransactionsQuery, PagedResponse<TransactionListItem>> handler,
             CancellationToken cancellationToken) =>
         {

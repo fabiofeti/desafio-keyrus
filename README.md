@@ -14,10 +14,11 @@ Registrar lançamentos financeiros (créditos/débitos) e consultar o saldo diá
 | Registro não depende da consolidação | API não fala com o broker; lançamento + Outbox numa transação local | Testes de falha com o Worker e com o RabbitMQ parados; teste de atomicidade |
 | Sem perda nem duplicação na consolidação | Outbox com publisher confirms → RabbitMQ (quorum + DLQ) → Inbox com incremento atômico | `ConsolidationFlowTests`, redelivery no Compose |
 | Observabilidade (P1) | `/health/live` e `/health/ready`; logs JSON com `CorrelationId` da API ao Worker; métricas por módulo | `HostTests`, `MetricsTests`, `dotnet-counters` no Compose |
+| Contratos (P1) | [OpenAPI](docs/api/openapi.json) gerado pela API e [exemplo do evento](docs/api/events/transactions.transaction-created.v1.json), guardados por testes de divergência | `OpenApiContractTests`, `TransactionCreatedContractTests` |
 | Isolamento entre módulos | DbContext, schema, migrations e role de banco por módulo; testes de arquitetura | `ModuleTests`, `DatabaseRoleTests` (`42501` na escrita e leitura cruzada) |
 | 50 RPS com ≤ 5% de perda | Executado: perda **0,00%** com o Worker ligado e parado | [Carga](#carga-de-50-rps-no-consolidado) |
 
-Placar: `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` **135/135** (15 arquitetura, 35 Transactions, 21 Consolidation, 64 integração com PostgreSQL e RabbitMQ reais). Detalhe de cada execução em [docs/software/03-testing.md](docs/software/03-testing.md#evidência).
+Placar: `dotnet build` 0 erros/0 warnings; `dotnet test CashFlow.slnx` **138/138** (15 arquitetura, 36 Transactions, 22 Consolidation, 65 integração com PostgreSQL e RabbitMQ reais). Detalhe de cada execução em [docs/software/03-testing.md](docs/software/03-testing.md#evidência).
 
 ## Arquitetura
 Monólito modular .NET 10 com dois processos: **API** (Minimal APIs) e **Worker** (publisher da Outbox e consumidor RabbitMQ), que hospedam os mesmos módulos sem duplicar código. Dois bounded contexts, **Transactions** e **Consolidation**, no mesmo PostgreSQL 17, cada um com schema, `DbContext`, migrations e role próprios. Um módulo nunca lê nem grava tabelas do outro: Consolidation conhece apenas o contrato versionado `TransactionCreated.v1`.
@@ -177,7 +178,7 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 - **Mensagem envenenada** segura a fila por ~40 s de backoff antes de ir à DLQ; replay da DLQ é manual.
 - **Carga medida localmente**, numa só máquina e sobre uma única data; não substitui um teste em ambiente de produção.
 - **Métricas sem exportador:** lidas com `dotnet-counters`; Prometheus/OTLP, dashboards e alertas são evolução. Profundidade da fila e idade da Outbox não são métricas (management UI e SQL).
-- Item P1 restante (contratos documentados a partir do código) e P2 (escala horizontal, HA, dashboards, custos) estão no [plano](docs/IMPLEMENTATION-PLAN.md) e não foram implementados.
+- Itens P2 (escala horizontal, HA, autenticação, replay automatizado da DLQ, dashboards, custos) estão só documentados no [plano](docs/IMPLEMENTATION-PLAN.md).
 
 ## Documentação
 - [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md)
@@ -187,6 +188,7 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 - [Software: design, dados e contratos](docs/software/01-design-and-contracts.md)
 - [Software: resiliência, segurança e NFRs](docs/software/02-quality-attributes.md)
 - [Software: testes, critérios de aceite e evidências](docs/software/03-testing.md)
+- [Contratos: OpenAPI](docs/api/openapi.json) e [evento TransactionCreated.v1](docs/api/events/transactions.transaction-created.v1.json)
 - [C4 e sequências em Mermaid](docs/diagrams/architecture.md)
 - [ADR: arquitetura e isolamento](docs/adr/ADR-001.md)
 

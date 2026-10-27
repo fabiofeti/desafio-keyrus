@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CashFlow.Common.Application.Messaging;
 using CashFlow.Common.Domain;
 using CashFlow.Common.Presentation.Endpoints;
@@ -14,7 +15,7 @@ internal sealed class Get : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         app.MapGet("daily-balances/{date}", async (
-            DateOnly date,
+            [Description("Data de negócio, YYYY-MM-DD.")] DateOnly date,
             IQueryHandler<GetDailyBalanceQuery, DailyBalanceResponse> handler,
             CancellationToken cancellationToken) =>
         {

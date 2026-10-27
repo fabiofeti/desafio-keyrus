@@ -18,6 +18,8 @@ O contrato `TransactionCreated.v1` vive em `CashFlow.Modules.Transactions.Integr
 API referencia módulos para expor endpoints; Worker referencia os mesmos assemblies para executar handlers, **sem duplicar domínio**. O Worker não deve receber permissão de escrita cruzada por usar ambos: configurar DbContexts com roles específicas e manter handlers separados.
 
 ## Contratos HTTP
+**Fonte de verdade:** [docs/api/openapi.json](../api/openapi.json), o documento que a API gera (`/openapi/v1.json`), commitado. `OpenApiContractTests` falha se o código e o arquivo divergirem; depois de uma mudança intencional, regenere com `UPDATE_CONTRACTS=1 dotnet test tests/CashFlow.IntegrationTests --filter OpenApiContract` e revise o diff. Os limites e headers abaixo estão anotados nos próprios endpoints (`Description`, `Range`, `MaxLength`, `RegularExpression`, `ProducesResponseHeader`); a validação em runtime continua no FluentValidation. Limitação do gerador: `type` aparece como `string` com descrição "Credit ou Debit", não como `enum`; números aceitam `number` ou `string` (padrão do `System.Text.Json` Web).
+
 `POST /transactions` com header `Idempotency-Key` e JSON:
 ```json
 {"type":"Credit","amount":125.50,"occurredAt":"2026-10-26T10:00:00-03:00","description":"Venda"}
@@ -37,6 +39,8 @@ Retorno `201`, `Location: /transactions/{id}` e corpo `id`, `type`, `amount`, `o
 Lê só `consolidation.daily_balances` (nunca soma `transactions.transactions`); `balance = credits - debits`, calculado na leitura. Data sem lançamento consolidado: `200` com zeros e `lastUpdatedAt: null` (zero, e não 404: o cliente não precisa distinguir "sem movimento" de "ainda não processado"). Data fora de `YYYY-MM-DD` ou inexistente (`2026-13-01`): `400`. A leitura não é sincronizada com o POST: `consistency: "eventual"` e `lastUpdatedAt` dizem até onde o saldo foi consolidado.
 
 ## Evento
+**Exemplo de referência:** [docs/api/events/transactions.transaction-created.v1.json](../api/events/transactions.transaction-created.v1.json), gerado com o mesmo serializador da Outbox. Dois testes guardam o contrato: do lado do produtor, `Transactions.UnitTests/Contracts` exige que o payload serializado seja igual ao exemplo; do lado do consumidor, `Consolidation.UnitTests/Contracts` exige que o exemplo seja lido com todos os campos que a consolidação usa. Mudança incompatível = `TransactionCreated.v2`.
+
 `TransactionCreated.v1` (`type` da mensagem `transactions.transaction-created.v1`): `id` (eventId, chave de deduplicação), `occurredOnUtc`, `transactionId`, `type`, `amount`, `businessDate`, `occurredAt`, `version`, `correlationId`. Publicação persistente com confirmação. Evitar dados pessoais desnecessários.
 
 Topologia: exchange `cashflow.transactions` (topic, durável), routing key `transaction-created.v1`, fila quorum `consolidation.transaction-created.v1` e sua DLQ, declaradas pelo consumidor. Publicação com `mandatory`: sem fila ligada o broker devolve a mensagem (`NO_ROUTE`), o publisher registra a falha e a linha continua na Outbox para o próximo ciclo.

@@ -1,0 +1,15 @@
+# Line endings are normalised to LF in the repository. Without this, Git for
+# Windows (core.autocrlf=true by default) checks scripts out with CRLF, and the
+# PostgreSQL container fails on deploy/postgres/init/01-roles.sh ("bash\r":
+# exit 127) - the stack never starts.
+* text=auto
+
+# Executed inside Linux containers or by bash: always LF, on every OS.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+.env.example text eol=lf
+
+*.png binary
+*.pdf binary

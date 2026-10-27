@@ -178,13 +178,14 @@ docker compose exec rabbitmq rabbitmqctl delete_queue --if-empty consolidation.t
 - **Mensagem envenenada** segura a fila por ~40 s de backoff antes de ir à DLQ; replay da DLQ é manual.
 - **Carga medida localmente**, numa só máquina e sobre uma única data; não substitui um teste em ambiente de produção.
 - **Métricas sem exportador:** lidas com `dotnet-counters`; Prometheus/OTLP, dashboards e alertas são evolução. Profundidade da fila e idade da Outbox não são métricas (management UI e SQL).
-- Itens P2 (escala horizontal, HA, autenticação, replay automatizado da DLQ, dashboards, custos) estão só documentados no [plano](docs/IMPLEMENTATION-PLAN.md).
+- Itens P2 (HA, autenticação, replay automatizado da DLQ, dashboards, custos) estão só documentados, com proposta por item e o procedimento para extrair um módulo para microsserviço, em [04-evolution-and-module-extraction](docs/solucoes/04-evolution-and-module-extraction.md). A escala horizontal do Worker foi medida: 3 réplicas, soma exata, nenhum evento publicado ou aplicado duas vezes ([scale-workers.sh](tests/chaos/scale-workers.sh)).
 
 ## Documentação
 - [Plano de implementação e estado atual](docs/IMPLEMENTATION-PLAN.md)
 - [Soluções: negócio e requisitos](docs/solucoes/01-business-and-requirements.md)
 - [Soluções: arquitetura e trade-offs](docs/solucoes/02-target-architecture.md)
 - [Soluções: riscos, custos e evolução](docs/solucoes/03-operations-and-roadmap.md)
+- [Soluções: P2 e extração de módulo para microsserviço](docs/solucoes/04-evolution-and-module-extraction.md)
 - [Software: design, dados e contratos](docs/software/01-design-and-contracts.md)
 - [Software: resiliência, segurança e NFRs](docs/software/02-quality-attributes.md)
 - [Software: testes, critérios de aceite e evidências](docs/software/03-testing.md)

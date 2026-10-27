@@ -1,0 +1,27 @@
+[22:20:10] 1. stack up with 3 workers
+[22:20:43] 2. baseline for 2026-11-05
+[22:20:44]    credits=0 debits=0 (cents), events so far=0
+[22:20:44] 3. post 300 transactions, 20 at a time
+[22:20:45]    300/300 POST 201 in 1170 ms
+[22:20:45] 4. wait for convergence
+[22:20:46]    converged 1 s after the last POST
+[22:20:51] 5. nothing twice, work shared
+[22:20:52]    events=300 pending=0 published-more-than-once=0 inbox=300
+[22:20:52]    cashflow-worker-1: published=150 applied=97 duplicates=0
+[22:20:53]    cashflow-worker-2: published=102 applied=101 duplicates=0
+[22:20:53]    cashflow-worker-3: published=48 applied=102 duplicates=0
+[22:20:56] PASS: 3 workers, 300 transactions, exact sum, each event published and applied once
+=== run 2
+[22:21:03] 1. stack up with 3 workers
+[22:21:18] 2. baseline for 2026-11-05
+[22:21:20]    credits=4990000 debits=2482850 (cents), events so far=300
+[22:21:20] 3. post 300 transactions, 20 at a time
+[22:21:21]    300/300 POST 201 in 1337 ms
+[22:21:21] 4. wait for convergence
+[22:21:22]    converged 1 s after the last POST
+[22:21:27] 5. nothing twice, work shared
+[22:21:28]    events=600 pending=0 published-more-than-once=0 inbox=600
+[22:21:28]    cashflow-worker-1: published=100 applied=98 duplicates=0
+[22:21:28]    cashflow-worker-2: published=150 applied=101 duplicates=0
+[22:21:28]    cashflow-worker-3: published=50 applied=101 duplicates=0
+[22:21:31] PASS: 3 workers, 300 transactions, exact sum, each event published and applied once

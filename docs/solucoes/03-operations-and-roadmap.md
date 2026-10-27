@@ -11,7 +11,7 @@ Healthchecks com readiness distinta de liveness: no MVP, `/health/ready` da API 
 | Mensagem duplicada | Inbox/constraint única e transação atômica |
 | Mensagem que sempre falha (poison) | Fila quorum com limite de entregas; após o limite vai para `consolidation.transaction-created.v1.dlq` e a fila segue; monitorar profundidade da DLQ e reprocessar manualmente |
 | Banco indisponível | Limitação do MVP; backup/HA em produção |
-| Crescimento da fila | Monitorar lag, escalar consumidores, avaliar backpressure |
+| Crescimento da fila | Monitorar lag, escalar consumidores (3 réplicas do Worker medidas sem duplicar efeito), avaliar backpressure |
 | Dados temporariamente desatualizados | Informar consistência eventual no contrato de leitura |
 
 ## Custos
@@ -21,4 +21,4 @@ Ambiente local: imagens gratuitas e sem licenças comerciais obrigatórias; cust
 Não se aplica: o enunciado não informa legado. Se existisse, sugerir strangler e migração gradual de lançamentos, mas não incluir implementação fictícia.
 
 ## Evoluções futuras
-Autenticação/autorização, replay automatizado da DLQ, dashboards, escalabilidade independente, HA/DR, alertas, trilhas de auditoria e isolamento físico de bancos se necessário.
+Autenticação/autorização, replay automatizado da DLQ, dashboards, escalabilidade independente, HA/DR, alertas, trilhas de auditoria e isolamento físico de bancos se necessário. Proposta por item, o que já existe no código, e o procedimento para extrair um módulo para microsserviço: [04-evolution-and-module-extraction](04-evolution-and-module-extraction.md).

@@ -8,6 +8,7 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Módulos `Transactions` e `Consolidation` via `add-module`: cinco projetos cada em `src/Modules/{Module}`, `{Module}DbContext` (schema, connection string e role próprias, histórico de migrations no próprio schema), registro na API (`Add{Module}Module`), no Worker (`Add{Module}Worker`), no migrator e nos testes de arquitetura; projetos `CashFlow.Modules.{Module}.UnitTests`.
 - Lançamentos (`add-entity` + `add-feature`): agregado `Transaction` imutável, `OutboxMessage` no `TransactionsDbContext`, migration `Add_Transactions_And_Outbox`; `POST /transactions` (Idempotency-Key, replay, 409, corrida resolvida pelo índice único) grava lançamento e `TransactionCreated.v1` na Outbox no mesmo `SaveChangesAsync`; `GET /transactions?date=` paginado. Falhas de binding (data/JSON inválidos) passaram a responder 400 em vez de 500.
 - Integração entre módulos (`add-integration-event`): `OutboxProcessor`/`OutboxPublisher` no Worker (`FOR UPDATE SKIP LOCKED`, marca só após confirm, para no primeiro erro); `DailyBalance` + `InboxMessage` e migration `Add_Daily_Balances_And_Inbox`; consumer `consolidation.transaction-created.v1` → `ApplyTransactionToDailyBalanceCommand` → uma instrução SQL atômica (Inbox + incremento). Consolidation referencia só `Transactions.IntegrationEvents`.
+- P2 (documentação): evolução por item e procedimento de extração de módulo; escala do Worker medida com 3 réplicas.
 - Contratos (P1): snapshot do OpenAPI gerado e exemplo do `TransactionCreated.v1` com testes de divergência (produtor e consumidor); endpoints anotados (limites, headers de resposta, 400 como problem details); diagramas C4 e de sequência com os nomes do código, sintaxe validada.
 - Observabilidade (P1, decisão do usuário: `Meter` nativo + testes, sem exportador): `/health/live` e `/health/ready` (PostgreSQL por módulo, broker fora), logs JSON com escopo `CorrelationId` (+ `MessageId`/`MessageType` no Worker), instrumentos `CashFlow.Transactions`/`Consolidation`/`Messaging`; `ThrowOnBadRequest` para o 400 de binding sair em problem details também em Production.
 - Queda do broker (`add-challenge`, P1): `tests/chaos/broker-down.sh` para o RabbitMQ, envia N lançamentos, mantém o broker fora por `OUTAGE` s, religa e confere POSTs 201, Outbox retida, breaker aberto, Worker vivo, reconexão de publisher e consumer, soma exata e fila drenada.
@@ -27,7 +28,7 @@ Ponto de retomada para uma sessão nova. Leia também [CLAUDE.md](../CLAUDE.md) 
 - Com `DeliveryLimit` 5, uma mensagem envenenada leva ~40 s de backoff até a DLQ e segura a fila nesse intervalo; replay da DLQ é manual.
 - Se o publisher rodar antes de o consumer declarar a fila, o broker devolve `NO_ROUTE`; a linha fica na Outbox e sai no ciclo seguinte (`attempt_count` sobe).
 
-**P0 e P1 completos.** Próximos passos só com pedido do usuário; P2 continua apenas documentado.
+**P0 e P1 completos; P2 documentado.** Próximos passos só com pedido do usuário.
 
 Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registrada antes de marcar `[x]`.
 
@@ -52,6 +53,7 @@ Cada etapa termina com `dotnet build`/`dotnet test` verdes e evidência registra
 
 ## P2 — apenas documentar
 Escala horizontal, HA do broker/banco, autenticação real, replay operacional da DLQ (a DLQ em si foi antecipada a pedido), dashboards, custos cloud validados, deploy em produção.
+- [x] Documentado em [04-evolution-and-module-extraction](solucoes/04-evolution-and-module-extraction.md): proposta por item, gatilhos para extrair um módulo e o procedimento em fases (exemplo: Consolidation). Única execução: 3 réplicas do Worker medidas com `tests/chaos/scale-workers.sh` — PASS em duas execuções, soma exata, nada publicado ou aplicado duas vezes ([testes](software/03-testing.md#evidência)). Nada de código novo.
 
 ## Instruções de execução
 Não adicionar funcionalidades fora do desafio. Depois de cada P0, rodar `dotnet build`/`dotnet test`; não marcar como concluído sem evidência. Implementar primeiro o caminho feliz end-to-end e então resiliência. Manter a solução simples.
